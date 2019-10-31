@@ -35,6 +35,7 @@ int CPU_HAS_X86_FEATURE_RDTSCP;
 int CPU_HAS_X86_FEATURE_LBRV;
 int CPU_HAS_X86_FEATURE_NRIPS;
 int CPU_HAS_X86_FEATURE_SMEP;
+int CPU_HAS_X86_FEATURE_SMAP;
 int CPU_HAS_X86_FEATURE_MPX;
 int CPU_HAS_X86_FEATURE_XSAVES;
 int CPU_HAS_X86_FEATURE_CONSTANT_TSC;
@@ -400,11 +401,12 @@ static void cpu_features_init(void)
 	check_cpu_has(X86_FEATURE_RDTSCP, 0x80000001, CPUID_EDX, 27);
 
 	check_cpu_has_ex(X86_FEATURE_HLE, 7, 0, CPUID_EBX, 4);
+	check_cpu_has_ex(X86_FEATURE_SMEP, 7, 0, CPUID_EBX, 7);
 	check_cpu_has_ex(X86_FEATURE_RTM, 7, 0, CPUID_EBX, 11);
 	check_cpu_has_ex(X86_FEATURE_MPX, 7, 0, CPUID_EBX, 14);
+	check_cpu_has_ex(X86_FEATURE_SMAP, 7, 0, CPUID_EBX, 20);
 
 	check_cpu_has_ex(X86_FEATURE_PKU, 7, 0, CPUID_ECX, 3);
-	check_cpu_has_ex(X86_FEATURE_SMEP, 7, 0, CPUID_ECX, 7);
 
 	check_cpu_has(X86_FEATURE_NPT, 0x8000000a, CPUID_EDX, 0);
 	check_cpu_has(X86_FEATURE_LBRV, 0x8000000a, CPUID_EDX, 1);

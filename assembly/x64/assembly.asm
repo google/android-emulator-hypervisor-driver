@@ -626,11 +626,14 @@ __asm_fastop      proc frame
 			mov rdx, qword ptr CXT_TO_SRC[r8]
 			mov rcx, qword ptr CXT_TO_SRC2[r8]
 
+			; save host eflags
+			pushfq
 			push qword ptr[rdi]
 			popfq
 			call rsi
 			pushfq
 			pop qword ptr[rdi]
+			popfq
 
 			mov qword ptr CXT_TO_DST[r8], rax
 			mov qword ptr CXT_TO_SRC[r8], rdx

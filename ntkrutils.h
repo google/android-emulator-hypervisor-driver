@@ -18,6 +18,7 @@
 #include <string.h>
 #include <dos.h>
 #include <linux/list.h>
+#include <uapi/asm/processor-flags.h>
 
 // APC definitions (undocumented)
 typedef enum _KAPC_ENVIRONMENT
@@ -949,6 +950,7 @@ static __inline size_t __copy_user(void *dst, const void *src, size_t size,
 {
 	PMDL lock_mdl;
 	HANDLE handle;
+	int clac = 0;
 
 	lock_mdl = IoAllocateMdl(from? src : dst, size, FALSE, FALSE, NULL);
 	if (!lock_mdl)
@@ -957,7 +959,27 @@ static __inline size_t __copy_user(void *dst, const void *src, size_t size,
 	handle = MmSecureVirtualMemory(from? src : dst, size, PAGE_READWRITE);
 	if (!handle)
 		return size;
+	/*
+	 * If Windows turns on SMAP, we need set AC flag before accessing
+	 * user addr. However, since we do not know Windows's logic for AC
+	 * flag, we only turned it on the CPU this piece of code is running
+	 * and make sure we are not interrupted in the middle (in case Windows
+	 * has the chance to change the AC flag).
+	 */
+	if (boot_cpu_has(X86_FEATURE_SMAP)) {
+		local_irq_disable();
+		if (__readcr4() & X86_CR4_SMAP &&
+		    !(__readeflags() & X86_EFLAGS_AC)) {
+			clac = 1;
+			_stac();
+		} else
+			local_irq_enable();
+	}
 	memcpy(dst, src, size);
+	if (clac) {
+		_clac();
+		local_irq_enable();
+	}
 	MmUnsecureVirtualMemory(handle);
 	MmUnlockPages(lock_mdl);
 	IoFreeMdl(lock_mdl);
