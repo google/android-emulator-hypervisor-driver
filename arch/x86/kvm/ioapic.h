@@ -1,3 +1,7 @@
+/*
+ * Copyright 2019 Google LLC
+ */
+
 #ifndef __KVM_IO_APIC_H
 #define __KVM_IO_APIC_H
 
@@ -5,11 +9,13 @@
 
 #include <kvm/iodev.h>
 
+#include <gvm_types.h>
+
 struct kvm;
 struct kvm_vcpu;
 
-#define IOAPIC_NUM_PINS  KVM_IOAPIC_NUM_PINS
-#define MAX_NR_RESERVED_IOAPIC_PINS KVM_MAX_IRQ_ROUTES
+#define IOAPIC_NUM_PINS  GVM_IOAPIC_NUM_PINS
+#define MAX_NR_RESERVED_IOAPIC_PINS GVM_MAX_IRQ_ROUTES
 #define IOAPIC_VERSION_ID 0x11	/* IOAPIC version */
 #define IOAPIC_EDGE_TRIG  0
 #define IOAPIC_LEVEL_TRIG 1
@@ -34,21 +40,17 @@ struct kvm_vcpu;
 #define	IOAPIC_INIT			0x5
 #define	IOAPIC_EXTINT			0x7
 
-#ifdef CONFIG_X86
 #define RTC_GSI 8
-#else
-#define RTC_GSI -1U
-#endif
 
 struct dest_map {
 	/* vcpu bitmap where IRQ has been sent */
-	DECLARE_BITMAP(map, KVM_MAX_VCPU_ID);
+	DECLARE_BITMAP(map, GVM_MAX_VCPU_ID);
 
 	/*
 	 * Vector sent to a given vcpu, only valid when
 	 * the vcpu's bit in map is set
 	 */
-	u8 vectors[KVM_MAX_VCPU_ID];
+	u8 vectors[GVM_MAX_VCPU_ID];
 };
 
 
@@ -81,29 +83,15 @@ struct kvm_ioapic {
 	u32 irr;
 	u32 pad;
 	union kvm_ioapic_redirect_entry redirtbl[IOAPIC_NUM_PINS];
-	unsigned long irq_states[IOAPIC_NUM_PINS];
+	size_t irq_states[IOAPIC_NUM_PINS];
 	struct kvm_io_device dev;
 	struct kvm *kvm;
 	void (*ack_notifier)(void *opaque, int irq);
 	spinlock_t lock;
 	struct rtc_status rtc_status;
-	struct delayed_work eoi_inject;
 	u32 irq_eoi[IOAPIC_NUM_PINS];
 	u32 irr_delivered;
 };
-
-#ifdef DEBUG
-#define ASSERT(x)  							\
-do {									\
-	if (!(x)) {							\
-		printk(KERN_EMERG "assertion failed %s: %d: %s\n",	\
-		       __FILE__, __LINE__, #x);				\
-		BUG();							\
-	}								\
-} while (0)
-#else
-#define ASSERT(x) do { } while (0)
-#endif
 
 static inline struct kvm_ioapic *ioapic_irqchip(struct kvm *kvm)
 {

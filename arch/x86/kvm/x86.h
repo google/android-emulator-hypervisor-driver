@@ -1,9 +1,14 @@
-#ifndef ARCH_X86_KVM_X86_H
-#define ARCH_X86_KVM_X86_H
+/*
+ * Copyright 2019 Google LLC
+ */
+
+#ifndef ARCH_X86_GVM_X86_H
+#define ARCH_X86_GVM_X86_H
 
 #include <linux/kvm_host.h>
-#include <asm/pvclock.h>
+#include <gvm_types.h>
 #include "kvm_cache_regs.h"
+#include <asm/msr-index.h>
 
 #define MSR_IA32_CR_PAT_DEFAULT  0x0007040600070406ULL
 
@@ -67,17 +72,17 @@ static inline bool mmu_is_nested(struct kvm_vcpu *vcpu)
 
 static inline int is_pae(struct kvm_vcpu *vcpu)
 {
-	return kvm_read_cr4_bits(vcpu, X86_CR4_PAE);
+	return (int)kvm_read_cr4_bits(vcpu, X86_CR4_PAE);
 }
 
 static inline int is_pse(struct kvm_vcpu *vcpu)
 {
-	return kvm_read_cr4_bits(vcpu, X86_CR4_PSE);
+	return (int)kvm_read_cr4_bits(vcpu, X86_CR4_PSE);
 }
 
 static inline int is_paging(struct kvm_vcpu *vcpu)
 {
-	return likely(kvm_read_cr0_bits(vcpu, X86_CR0_PG));
+	return likely((int)kvm_read_cr0_bits(vcpu, X86_CR0_PG));
 }
 
 static inline u32 bit(int bitno)
@@ -113,7 +118,7 @@ static inline void vcpu_clear_mmio_info(struct kvm_vcpu *vcpu, gva_t gva)
 	vcpu->arch.mmio_gva = 0;
 }
 
-static inline bool vcpu_match_mmio_gva(struct kvm_vcpu *vcpu, unsigned long gva)
+static inline bool vcpu_match_mmio_gva(struct kvm_vcpu *vcpu, size_t gva)
 {
 	if (vcpu_match_mmio_gen(vcpu) && vcpu->arch.mmio_gva &&
 	      vcpu->arch.mmio_gva == (gva & PAGE_MASK))
@@ -131,21 +136,21 @@ static inline bool vcpu_match_mmio_gpa(struct kvm_vcpu *vcpu, gpa_t gpa)
 	return false;
 }
 
-static inline unsigned long kvm_register_readl(struct kvm_vcpu *vcpu,
+static inline size_t kvm_register_readl(struct kvm_vcpu *vcpu,
 					       enum kvm_reg reg)
 {
-	unsigned long val = kvm_register_read(vcpu, reg);
+	size_t val = kvm_register_read(vcpu, reg);
 
 	return is_64_bit_mode(vcpu) ? val : (u32)val;
 }
 
 static inline void kvm_register_writel(struct kvm_vcpu *vcpu,
 				       enum kvm_reg reg,
-				       unsigned long val)
+				       size_t val)
 {
 	if (!is_64_bit_mode(vcpu))
 		val = (u32)val;
-	return kvm_register_write(vcpu, reg, val);
+	kvm_register_write(vcpu, reg, val);
 }
 
 static inline bool kvm_check_has_quirk(struct kvm *kvm, u64 quirk)
@@ -178,7 +183,7 @@ bool kvm_mtrr_check_gfn_range_consistency(struct kvm_vcpu *vcpu, gfn_t gfn,
 					  int page_num);
 bool kvm_vector_hashing_enabled(void);
 
-#define KVM_SUPPORTED_XCR0     (XFEATURE_MASK_FP | XFEATURE_MASK_SSE \
+#define GVM_SUPPORTED_XCR0     (XFEATURE_MASK_FP | XFEATURE_MASK_SSE \
 				| XFEATURE_MASK_YMM | XFEATURE_MASK_BNDREGS \
 				| XFEATURE_MASK_BNDCSR | XFEATURE_MASK_AVX512 \
 				| XFEATURE_MASK_PKRU)
@@ -190,13 +195,7 @@ extern unsigned int min_timer_period_us;
 
 extern unsigned int lapic_timer_advance_ns;
 
-extern struct static_key kvm_no_apic_vcpu;
-
-static inline u64 nsec_to_cycles(struct kvm_vcpu *vcpu, u64 nsec)
-{
-	return pvclock_scale_delta(nsec, vcpu->arch.virtual_tsc_mult,
-				   vcpu->arch.virtual_tsc_shift);
-}
+extern int kvm_no_apic_vcpu;
 
 /* Same "calling convention" as do_div:
  * - divide (n << 32) by base

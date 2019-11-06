@@ -1,0 +1,189 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{9CDEE243-5FEC-44CD-9C26-A6B8AE76245E}</ProjectGuid>
+    <TemplateGuid>{dd38f7fc-d7bd-488b-9242-7d8754cde80d}</TemplateGuid>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
+    <Configuration>Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">Win32</Platform>
+    <RootNamespace>gvm</RootNamespace>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>WDM</DriverType>
+    <DriverTargetPlatform>Desktop</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>WDM</DriverType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <TargetVersion>Windows7</TargetVersion>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>WDM</DriverType>
+    <SpectreMitigation>false</SpectreMitigation>
+    <DriverTargetPlatform>Desktop</DriverTargetPlatform>
+    <_NT_TARGET_VERSION>0x0601</_NT_TARGET_VERSION>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <TargetVersion>Windows7</TargetVersion>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>WDM</DriverType>
+    <SpectreMitigation>false</SpectreMitigation>
+    <DriverTargetPlatform>Desktop</DriverTargetPlatform>
+    <_NT_TARGET_VERSION>0x0601</_NT_TARGET_VERSION>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <IntDir>$(ProjectDir)..\build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <CodeAnalysisRuleSet>..\..\..\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <OutDir>$(SolutionDir)..\$(ConfigurationName)\</OutDir>
+    <IntDir>$(ProjectDir)..\build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\arch\x86\include;$(ProjectDir)..\include;$(ProjectDir)..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>CONFIG_X86_64;CONFIG_X86_LOCAL_APIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <PreprocessToFile>false</PreprocessToFile>
+      <EnablePREfast>false</EnablePREfast>
+    </ClCompile>
+    <MASM>
+      <PreprocessorDefinitions>X64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(ProjectDir)..\;%(IncludePaths)</IncludePaths>
+    </MASM>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)\..\build\asmgen\x64\$(Configuration)\asmgen.exe &gt; $(ProjectDir)..\__asm.inc</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\arch\x86\include;$(ProjectDir)..\include;$(ProjectDir)..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>CONFIG_X86_64;CONFIG_X86_LOCAL_APIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)\..\build\asmgen\x64\$(Configuration)\asmgen.exe &gt; $(ProjectDir)..\__asm.inc</Command>
+    </PreBuildEvent>
+    <MASM>
+      <IncludePaths>$(ProjectDir)..\;%(IncludePaths)</IncludePaths>
+    </MASM>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <FilesToPackage Include="$(TargetPath)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\arch\x86\kvm\cpuid.c" />
+    <ClCompile Include="..\arch\x86\kvm\emulate.c" />
+    <ClCompile Include="..\arch\x86\kvm\i8259.c" />
+    <ClCompile Include="..\arch\x86\kvm\ioapic.c" />
+    <ClCompile Include="..\arch\x86\kvm\irq.c" />
+    <ClCompile Include="..\arch\x86\kvm\irq_comm.c" />
+    <ClCompile Include="..\arch\x86\kvm\lapic.c" />
+    <ClCompile Include="..\arch\x86\kvm\mmu.c" />
+    <ClCompile Include="..\arch\x86\kvm\mmu_audit.c" />
+    <ClCompile Include="..\arch\x86\kvm\mtrr.c" />
+    <ClCompile Include="..\arch\x86\kvm\page_track.c" />
+    <ClCompile Include="..\arch\x86\kvm\pmu.c" />
+    <ClCompile Include="..\arch\x86\kvm\pmu_amd.c" />
+    <ClCompile Include="..\arch\x86\kvm\pmu_intel.c" />
+    <ClCompile Include="..\arch\x86\kvm\svm.c" />
+    <ClCompile Include="..\arch\x86\kvm\vmx.c" />
+    <ClCompile Include="..\arch\x86\kvm\x86.c" />
+    <ClCompile Include="..\gvm-main.c" />
+    <ClCompile Include="..\ntkrutils.c" />
+    <ClCompile Include="..\virt\kvm\irqchip.c" />
+    <ClCompile Include="..\virt\kvm\kvm_main.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\arch\x86\include\asm\kvm_emulate.h" />
+    <ClInclude Include="..\arch\x86\include\asm\kvm_guest.h" />
+    <ClInclude Include="..\arch\x86\include\asm\kvm_host.h" />
+    <ClInclude Include="..\arch\x86\include\asm\kvm_page_track.h" />
+    <ClInclude Include="..\arch\x86\include\uapi\asm\debugreg.h" />
+    <ClInclude Include="..\arch\x86\include\uapi\asm\kvm.h" />
+    <ClInclude Include="..\arch\x86\include\uapi\asm\kvm_perf.h" />
+    <ClInclude Include="..\arch\x86\include\uapi\asm\processor-flags.h" />
+    <ClInclude Include="..\arch\x86\include\uapi\asm\vmx.h" />
+    <ClInclude Include="..\arch\x86\kvm\cpuid.h" />
+    <ClInclude Include="..\arch\x86\kvm\ioapic.h" />
+    <ClInclude Include="..\arch\x86\kvm\irq.h" />
+    <ClInclude Include="..\arch\x86\kvm\kvm_cache_regs.h" />
+    <ClInclude Include="..\arch\x86\kvm\lapic.h" />
+    <ClInclude Include="..\arch\x86\kvm\mmu.h" />
+    <ClInclude Include="..\arch\x86\kvm\mmutrace.h" />
+    <ClInclude Include="..\arch\x86\kvm\paging_tmpl.h" />
+    <ClInclude Include="..\arch\x86\kvm\pmu.h" />
+    <ClInclude Include="..\arch\x86\kvm\tss.h" />
+    <ClInclude Include="..\arch\x86\kvm\x86.h" />
+    <ClInclude Include="..\gvm-main.h" />
+    <ClInclude Include="..\gvm_types.h" />
+    <ClInclude Include="..\include\kvm\iodev.h" />
+    <ClInclude Include="..\include\linux\kvm_host.h" />
+    <ClInclude Include="..\include\linux\kvm_types.h" />
+    <ClInclude Include="..\include\linux\list.h" />
+    <ClInclude Include="..\ntkrutils.h" />
+    <ClInclude Include="..\__asm.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\arch\x86\kvm\Kconfig" />
+    <None Include="..\arch\x86\kvm\Makefile" />
+    <None Include="..\virt\kvm\Kconfig" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="..\assembly\x64\assembly.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\gvm.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

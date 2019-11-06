@@ -2,6 +2,7 @@
  * Kernel-based Virtual Machine -- Performance Monitoring Unit support
  *
  * Copyright 2015 Red Hat, Inc. and/or its affiliates.
+ * Copyright 2019 Google LLC
  *
  * Authors:
  *   Avi Kivity   <avi@redhat.com>
@@ -13,6 +14,7 @@
  *
  */
 
+#if 0
 #include <linux/types.h>
 #include <linux/kvm_host.h>
 #include <linux/perf_event.h>
@@ -63,9 +65,9 @@ static void kvm_perf_overflow(struct perf_event *perf_event,
 	struct kvm_pmu *pmu = pmc_to_pmu(pmc);
 
 	if (!test_and_set_bit(pmc->idx,
-			      (unsigned long *)&pmu->reprogram_pmi)) {
-		__set_bit(pmc->idx, (unsigned long *)&pmu->global_status);
-		kvm_make_request(KVM_REQ_PMU, pmc->vcpu);
+			      (size_t *)&pmu->reprogram_pmi)) {
+		__set_bit(pmc->idx, (size_t *)&pmu->global_status);
+		kvm_make_request(GVM_REQ_PMU, pmc->vcpu);
 	}
 }
 
@@ -77,9 +79,9 @@ static void kvm_perf_overflow_intr(struct perf_event *perf_event,
 	struct kvm_pmu *pmu = pmc_to_pmu(pmc);
 
 	if (!test_and_set_bit(pmc->idx,
-			      (unsigned long *)&pmu->reprogram_pmi)) {
-		__set_bit(pmc->idx, (unsigned long *)&pmu->global_status);
-		kvm_make_request(KVM_REQ_PMU, pmc->vcpu);
+			      (size_t *)&pmu->reprogram_pmi)) {
+		__set_bit(pmc->idx, (size_t *)&pmu->global_status);
+		kvm_make_request(GVM_REQ_PMU, pmc->vcpu);
 
 		/*
 		 * Inject PMI. If vcpu was in a guest mode during NMI PMI
@@ -92,7 +94,7 @@ static void kvm_perf_overflow_intr(struct perf_event *perf_event,
 		if (!kvm_is_in_guest())
 			irq_work_queue(&pmc_to_pmu(pmc)->irq_work);
 		else
-			kvm_make_request(KVM_REQ_PMI, pmc->vcpu);
+			kvm_make_request(GVM_REQ_PMI, pmc->vcpu);
 	}
 }
 
@@ -130,7 +132,7 @@ static void pmc_reprogram_counter(struct kvm_pmc *pmc, u32 type,
 	}
 
 	pmc->perf_event = event;
-	clear_bit(pmc->idx, (unsigned long*)&pmc_to_pmu(pmc)->reprogram_pmi);
+	clear_bit(pmc->idx, (size_t*)&pmc_to_pmu(pmc)->reprogram_pmi);
 }
 
 void reprogram_gp_counter(struct kvm_pmc *pmc, u64 eventsel)
@@ -173,7 +175,6 @@ void reprogram_gp_counter(struct kvm_pmc *pmc, u64 eventsel)
 			      (eventsel & HSW_IN_TX),
 			      (eventsel & HSW_IN_TX_CHECKPOINTED));
 }
-EXPORT_SYMBOL_GPL(reprogram_gp_counter);
 
 void reprogram_fixed_counter(struct kvm_pmc *pmc, u8 ctrl, int idx)
 {
@@ -191,7 +192,6 @@ void reprogram_fixed_counter(struct kvm_pmc *pmc, u8 ctrl, int idx)
 			      !(en_field & 0x1), /* exclude kernel */
 			      pmi, false, false);
 }
-EXPORT_SYMBOL_GPL(reprogram_fixed_counter);
 
 void reprogram_counter(struct kvm_pmu *pmu, int pmc_idx)
 {
@@ -209,7 +209,6 @@ void reprogram_counter(struct kvm_pmu *pmu, int pmc_idx)
 		reprogram_fixed_counter(pmc, ctrl, idx);
 	}
 }
-EXPORT_SYMBOL_GPL(reprogram_counter);
 
 void kvm_pmu_handle_event(struct kvm_vcpu *vcpu)
 {
@@ -219,11 +218,11 @@ void kvm_pmu_handle_event(struct kvm_vcpu *vcpu)
 
 	bitmask = pmu->reprogram_pmi;
 
-	for_each_set_bit(bit, (unsigned long *)&bitmask, X86_PMC_IDX_MAX) {
+	for_each_set_bit(bit, (size_t *)&bitmask, X86_PMC_IDX_MAX) {
 		struct kvm_pmc *pmc = kvm_x86_ops->pmu_ops->pmc_idx_to_pmc(pmu, bit);
 
 		if (unlikely(!pmc || !pmc->perf_event)) {
-			clear_bit(bit, (unsigned long *)&pmu->reprogram_pmi);
+			clear_bit(bit, (size_t *)&pmu->reprogram_pmi);
 			continue;
 		}
 
@@ -307,3 +306,4 @@ void kvm_pmu_destroy(struct kvm_vcpu *vcpu)
 {
 	kvm_pmu_reset(vcpu);
 }
+#endif

@@ -1,5 +1,11 @@
+/*
+ * Copyright 2019 Google LLC
+ */
+
 #ifndef _ASM_X86_KVM_PAGE_TRACK_H
 #define _ASM_X86_KVM_PAGE_TRACK_H
+
+#include <ntkrutils.h>
 
 enum kvm_page_track_mode {
 	KVM_PAGE_TRACK_WRITE,
@@ -35,11 +41,12 @@ struct kvm_page_track_notifier_node {
 };
 
 void kvm_page_track_init(struct kvm *kvm);
+void kvm_page_track_destroy(struct kvm *kvm);
 
 void kvm_page_track_free_memslot(struct kvm_memory_slot *free,
 				 struct kvm_memory_slot *dont);
 int kvm_page_track_create_memslot(struct kvm_memory_slot *slot,
-				  unsigned long npages);
+				  size_t npages);
 
 void kvm_slot_page_track_add_page(struct kvm *kvm,
 				  struct kvm_memory_slot *slot, gfn_t gfn,

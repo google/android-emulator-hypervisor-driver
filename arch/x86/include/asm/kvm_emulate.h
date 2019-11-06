@@ -1,3 +1,7 @@
+/*
+ * Copyright 2019 Google LLC
+ */
+
 /******************************************************************************
  * x86_emulate.h
  *
@@ -11,7 +15,7 @@
 #ifndef _ASM_X86_KVM_X86_EMULATE_H
 #define _ASM_X86_KVM_X86_EMULATE_H
 
-#include <asm/desc_defs.h>
+#include <gvm_types.h>
 
 struct x86_emulate_ctxt;
 enum x86_intercept;
@@ -107,7 +111,7 @@ struct x86_emulate_ops {
 	 *  @bytes: [IN ] Number of bytes to read from memory.
 	 */
 	int (*read_std)(struct x86_emulate_ctxt *ctxt,
-			unsigned long addr, void *val,
+			size_t addr, void *val,
 			unsigned int bytes,
 			struct x86_exception *fault);
 
@@ -118,7 +122,7 @@ struct x86_emulate_ops {
 	 *  @val:   [OUT] Value read from memory.
 	 *  @bytes: [IN ] Number of bytes to read from memory.
 	 */
-	int (*read_phys)(struct x86_emulate_ctxt *ctxt, unsigned long addr,
+	int (*read_phys)(struct x86_emulate_ctxt *ctxt, size_t addr,
 			void *val, unsigned int bytes);
 
 	/*
@@ -129,7 +133,7 @@ struct x86_emulate_ops {
 	 *  @bytes: [IN ] Number of bytes to write to memory.
 	 */
 	int (*write_std)(struct x86_emulate_ctxt *ctxt,
-			 unsigned long addr, void *val, unsigned int bytes,
+			 size_t addr, void *val, unsigned int bytes,
 			 struct x86_exception *fault);
 	/*
 	 * fetch: Read bytes of standard (non-emulated/special) memory.
@@ -139,7 +143,7 @@ struct x86_emulate_ops {
 	 *  @bytes: [IN ] Number of bytes to read from memory.
 	 */
 	int (*fetch)(struct x86_emulate_ctxt *ctxt,
-		     unsigned long addr, void *val, unsigned int bytes,
+		     size_t addr, void *val, unsigned int bytes,
 		     struct x86_exception *fault);
 
 	/*
@@ -149,7 +153,7 @@ struct x86_emulate_ops {
 	 *  @bytes: [IN ] Number of bytes to read from memory.
 	 */
 	int (*read_emulated)(struct x86_emulate_ctxt *ctxt,
-			     unsigned long addr, void *val, unsigned int bytes,
+			     size_t addr, void *val, unsigned int bytes,
 			     struct x86_exception *fault);
 
 	/*
@@ -160,7 +164,7 @@ struct x86_emulate_ops {
 	 *  @bytes: [IN ] Number of bytes to write to memory.
 	 */
 	int (*write_emulated)(struct x86_emulate_ctxt *ctxt,
-			      unsigned long addr, const void *val,
+			      size_t addr, const void *val,
 			      unsigned int bytes,
 			      struct x86_exception *fault);
 
@@ -173,9 +177,9 @@ struct x86_emulate_ops {
 	 *  @bytes: [IN ] Number of bytes to access using CMPXCHG.
 	 */
 	int (*cmpxchg_emulated)(struct x86_emulate_ctxt *ctxt,
-				unsigned long addr,
+				size_t addr,
 				const void *old,
-				const void *new,
+				const void *_new,
 				unsigned int bytes,
 				struct x86_exception *fault);
 	void (*invlpg)(struct x86_emulate_ctxt *ctxt, ulong addr);
@@ -192,7 +196,7 @@ struct x86_emulate_ops {
 			    struct desc_struct *desc, u32 *base3, int seg);
 	void (*set_segment)(struct x86_emulate_ctxt *ctxt, u16 selector,
 			    struct desc_struct *desc, u32 base3, int seg);
-	unsigned long (*get_cached_segment_base)(struct x86_emulate_ctxt *ctxt,
+	size_t (*get_cached_segment_base)(struct x86_emulate_ctxt *ctxt,
 						 int seg);
 	void (*get_gdt)(struct x86_emulate_ctxt *ctxt, struct desc_ptr *dt);
 	void (*get_idt)(struct x86_emulate_ctxt *ctxt, struct desc_ptr *dt);
@@ -223,7 +227,7 @@ struct x86_emulate_ops {
 	void (*set_nmi_mask)(struct x86_emulate_ctxt *ctxt, bool masked);
 };
 
-typedef u32 __attribute__((vector_size(16))) sse128_t;
+typedef u32 sse128_t[4];
 
 /* Type, address-of, and value of an instruction's operand. */
 struct operand {
@@ -231,11 +235,11 @@ struct operand {
 	unsigned int bytes;
 	unsigned int count;
 	union {
-		unsigned long orig_val;
+		size_t orig_val;
 		u64 orig_val64;
 	};
 	union {
-		unsigned long *reg;
+		size_t *reg;
 		struct segmented_address {
 			ulong ea;
 			unsigned seg;
@@ -244,7 +248,7 @@ struct operand {
 		unsigned mm;
 	} addr;
 	union {
-		unsigned long val;
+		size_t val;
 		u64 val64;
 		char valptr[sizeof(sse128_t)];
 		sse128_t vec_val;
@@ -261,8 +265,8 @@ struct fetch_cache {
 
 struct read_cache {
 	u8 data[1024];
-	unsigned long pos;
-	unsigned long end;
+	size_t pos;
+	size_t end;
 };
 
 /* Execution mode, passed to the emulator. */
@@ -283,8 +287,8 @@ struct x86_emulate_ctxt {
 	const struct x86_emulate_ops *ops;
 
 	/* Register state before/after emulation. */
-	unsigned long eflags;
-	unsigned long eip; /* eip before instruction emulation */
+	size_t eflags;
+	size_t eip; /* eip before instruction emulation */
 	/* Emulated execution mode, represented by an X86EMUL_MODE value. */
 	enum x86emul_mode mode;
 
@@ -334,10 +338,10 @@ struct x86_emulate_ctxt {
 	u8 modrm_seg;
 	u8 seg_override;
 	u64 d;
-	unsigned long _eip;
+	size_t _eip;
 	struct operand memop;
 	/* Fields above regs are cleared together. */
-	unsigned long _regs[NR_VCPU_REGS];
+	size_t _regs[NR_VCPU_REGS];
 	struct operand *memopp;
 	struct fetch_cache fetch;
 	struct read_cache io_read;

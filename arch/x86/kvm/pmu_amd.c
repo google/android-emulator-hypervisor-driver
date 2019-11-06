@@ -11,6 +11,7 @@
  *
  * Implementation is based on pmu_intel.c file
  */
+#if 0
 #include <linux/types.h>
 #include <linux/kvm_host.h>
 #include <linux/perf_event.h>
@@ -203,3 +204,4 @@ struct kvm_pmu_ops amd_pmu_ops = {
 	.init = amd_pmu_init,
 	.reset = amd_pmu_reset,
 };
+#endif

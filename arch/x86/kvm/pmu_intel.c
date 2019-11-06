@@ -2,6 +2,7 @@
  * KVM PMU support for Intel CPUs
  *
  * Copyright 2011 Red Hat, Inc. and/or its affiliates.
+ * Copyright 2019 Google LLC
  *
  * Authors:
  *   Avi Kivity   <avi@redhat.com>
@@ -11,6 +12,7 @@
  * the COPYING file in the top-level directory.
  *
  */
+#if 0
 #include <linux/types.h>
 #include <linux/kvm_host.h>
 #include <linux/perf_event.h>
@@ -63,7 +65,7 @@ static void global_ctrl_changed(struct kvm_pmu *pmu, u64 data)
 
 	pmu->global_ctrl = data;
 
-	for_each_set_bit(bit, (unsigned long *)&diff, X86_PMC_IDX_MAX)
+	for_each_set_bit(bit, (size_t *)&diff, X86_PMC_IDX_MAX)
 		reprogram_counter(pmu, bit);
 }
 
@@ -98,7 +100,7 @@ static bool intel_pmc_is_enabled(struct kvm_pmc *pmc)
 {
 	struct kvm_pmu *pmu = pmc_to_pmu(pmc);
 
-	return test_bit(pmc->idx, (unsigned long *)&pmu->global_ctrl);
+	return test_bit(pmc->idx, (size_t *)&pmu->global_ctrl);
 }
 
 static struct kvm_pmc *intel_pmc_idx_to_pmc(struct kvm_pmu *pmu, int pmc_idx)
@@ -356,3 +358,4 @@ struct kvm_pmu_ops intel_pmu_ops = {
 	.init = intel_pmu_init,
 	.reset = intel_pmu_reset,
 };
+#endif

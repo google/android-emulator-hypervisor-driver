@@ -1,3 +1,7 @@
+/*
+ * Copyright 2019 Google LLC
+ */
+
 #ifndef __KVM_X86_MMU_H
 #define __KVM_X86_MMU_H
 
@@ -44,7 +48,7 @@
 #define PT_PDPE_LEVEL 3
 #define PT_DIRECTORY_LEVEL 2
 #define PT_PAGE_TABLE_LEVEL 1
-#define PT_MAX_HUGEPAGE_LEVEL (PT_PAGE_TABLE_LEVEL + KVM_NR_PAGE_SIZES - 1)
+#define PT_MAX_HUGEPAGE_LEVEL (PT_PAGE_TABLE_LEVEL + GVM_NR_PAGE_SIZES - 1)
 
 static inline u64 rsvd_bits(int s, int e)
 {
@@ -96,7 +100,7 @@ static inline int kvm_mmu_reload(struct kvm_vcpu *vcpu)
 /*
  * Currently, we have two sorts of write-protection, a) the first one
  * write-protects guest page to sync the guest modification, b) another one is
- * used to sync dirty bitmap when we do KVM_GET_DIRTY_LOG. The differences
+ * used to sync dirty bitmap when we do GVM_GET_DIRTY_LOG. The differences
  * between these two sorts are:
  * 1) the first case clears SPTE_MMU_WRITEABLE bit.
  * 2) the first case requires flushing tlb immediately avoiding corrupting
@@ -126,7 +130,7 @@ static inline int kvm_mmu_reload(struct kvm_vcpu *vcpu)
  *
  * TODO: introduce APIs to split these two cases.
  */
-static inline int is_writable_pte(unsigned long pte)
+static inline int is_writable_pte(size_t pte)
 {
 	return pte & PT_WRITABLE_MASK;
 }
@@ -149,7 +153,7 @@ static inline u8 permission_fault(struct kvm_vcpu *vcpu, struct kvm_mmu *mmu,
 				  unsigned pfec)
 {
 	int cpl = kvm_x86_ops->get_cpl(vcpu);
-	unsigned long rflags = kvm_x86_ops->get_rflags(vcpu);
+	size_t rflags = kvm_x86_ops->get_rflags(vcpu);
 
 	/*
 	 * If CPL < 3, SMAP prevention are disabled if EFLAGS.AC = 1.
@@ -164,41 +168,20 @@ static inline u8 permission_fault(struct kvm_vcpu *vcpu, struct kvm_mmu *mmu,
 	 * but it will be one in index if SMAP checks are being overridden.
 	 * It is important to keep this branchless.
 	 */
-	unsigned long smap = (cpl - 3) & (rflags & X86_EFLAGS_AC);
+	size_t smap = (cpl - 3) & (rflags & X86_EFLAGS_AC);
 	int index = (pfec >> 1) +
 		    (smap >> (X86_EFLAGS_AC_BIT - PFERR_RSVD_BIT + 1));
 	bool fault = (mmu->permissions[index] >> pte_access) & 1;
 	u32 errcode = PFERR_PRESENT_MASK;
 
 	WARN_ON(pfec & (PFERR_PK_MASK | PFERR_RSVD_MASK));
-	if (unlikely(mmu->pkru_mask)) {
-		u32 pkru_bits, offset;
 
-		/*
-		* PKRU defines 32 bits, there are 16 domains and 2
-		* attribute bits per domain in pkru.  pte_pkey is the
-		* index of the protection domain, so pte_pkey * 2 is
-		* is the index of the first bit for the domain.
-		*/
-		pkru_bits = (kvm_read_pkru(vcpu) >> (pte_pkey * 2)) & 3;
-
-		/* clear present bit, replace PFEC.RSVD with ACC_USER_MASK. */
-		offset = (pfec & ~1) +
-			((pte_access & PT_USER_MASK) << (PFERR_RSVD_BIT - PT_USER_SHIFT));
-
-		pkru_bits &= mmu->pkru_mask >> offset;
-		errcode |= -pkru_bits & PFERR_PK_MASK;
-		fault |= (pkru_bits != 0);
-	}
-
-	return -(u32)fault & errcode;
+	return -(s32)fault & errcode;
 }
 
 void kvm_mmu_invalidate_zap_all_pages(struct kvm *kvm);
 void kvm_zap_gfn_range(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end);
 
-void kvm_mmu_gfn_disallow_lpage(struct kvm_memory_slot *slot, gfn_t gfn);
-void kvm_mmu_gfn_allow_lpage(struct kvm_memory_slot *slot, gfn_t gfn);
 bool kvm_mmu_slot_gfn_write_protect(struct kvm *kvm,
 				    struct kvm_memory_slot *slot, u64 gfn);
 #endif

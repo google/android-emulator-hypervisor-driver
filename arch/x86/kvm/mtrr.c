@@ -4,6 +4,7 @@
  * Copyright (C) 2006 Qumranet, Inc.
  * Copyright 2010 Red Hat, Inc. and/or its affiliates.
  * Copyright(C) 2015 Intel Corporation.
+ * Copyright 2019 Google LLC
  *
  * Authors:
  *   Yaniv Kamay  <yaniv@qumranet.com>
@@ -17,7 +18,6 @@
  */
 
 #include <linux/kvm_host.h>
-#include <asm/mtrr.h>
 
 #include "cpuid.h"
 #include "mmu.h"
@@ -26,10 +26,19 @@
 #define IA32_MTRR_DEF_TYPE_FE		(1ULL << 10)
 #define IA32_MTRR_DEF_TYPE_TYPE_MASK	(0xff)
 
+/* MTRR memory types, which are defined in SDM */
+#define MTRR_TYPE_UNCACHABLE 0
+#define MTRR_TYPE_WRCOMB     1
+/*#define MTRR_TYPE_         2*/
+/*#define MTRR_TYPE_         3*/
+#define MTRR_TYPE_WRTHROUGH  4
+#define MTRR_TYPE_WRPROT     5
+#define MTRR_TYPE_WRBACK     6
+#define MTRR_NUM_TYPES       7
+
 static bool msr_mtrr_valid(unsigned msr)
 {
 	switch (msr) {
-	case 0x200 ... 0x200 + 2 * KVM_NR_VAR_MTRR - 1:
 	case MSR_MTRRfix64K_00000:
 	case MSR_MTRRfix16K_80000:
 	case MSR_MTRRfix16K_A0000:
@@ -44,6 +53,9 @@ static bool msr_mtrr_valid(unsigned msr)
 	case MSR_MTRRdefType:
 	case MSR_IA32_CR_PAT:
 		return true;
+	default:
+		if (msr >= 0x200 && msr < 0x210)
+			return true;
 	}
 	return false;
 }
@@ -83,7 +95,7 @@ bool kvm_mtrr_valid(struct kvm_vcpu *vcpu, u32 msr, u64 data)
 	}
 
 	/* variable MTRRs */
-	WARN_ON(!(msr >= 0x200 && msr < 0x200 + 2 * KVM_NR_VAR_MTRR));
+	WARN_ON(!(msr >= 0x200 && msr < 0x200 + 2 * kvm_NR_VAR_MTRR));
 
 	mask = (~0ULL) << cpuid_maxphyaddr(vcpu);
 	if ((msr & 1) == 0) {
@@ -101,7 +113,6 @@ bool kvm_mtrr_valid(struct kvm_vcpu *vcpu, u32 msr, u64 data)
 
 	return true;
 }
-EXPORT_SYMBOL_GPL(kvm_mtrr_valid);
 
 static bool mtrr_is_enabled(struct kvm_mtrr *mtrr_state)
 {
@@ -200,11 +211,19 @@ static bool fixed_msr_to_seg_unit(u32 msr, int *seg, int *unit)
 		*seg = 0;
 		*unit = 0;
 		break;
-	case MSR_MTRRfix16K_80000 ... MSR_MTRRfix16K_A0000:
+	case MSR_MTRRfix16K_80000:
+	case MSR_MTRRfix16K_A0000:
 		*seg = 1;
 		*unit = msr - MSR_MTRRfix16K_80000;
 		break;
-	case MSR_MTRRfix4K_C0000 ... MSR_MTRRfix4K_F8000:
+	case MSR_MTRRfix4K_C0000:
+	case MSR_MTRRfix4K_C8000:
+	case MSR_MTRRfix4K_D0000:
+	case MSR_MTRRfix4K_D8000:
+	case MSR_MTRRfix4K_E0000:
+	case MSR_MTRRfix4K_E8000:
+	case MSR_MTRRfix4K_F0000:
+	case MSR_MTRRfix4K_F8000:
 		*seg = 2;
 		*unit = msr - MSR_MTRRfix4K_C0000;
 		break;
@@ -319,8 +338,7 @@ static void update_mtrr(struct kvm_vcpu *vcpu, u32 msr)
 	gfn_t start, end;
 	int index;
 
-	if (msr == MSR_IA32_CR_PAT || !tdp_enabled ||
-	      !kvm_arch_has_noncoherent_dma(vcpu->kvm))
+	if (msr == MSR_IA32_CR_PAT || !tdp_enabled)
 		return;
 
 	if (!mtrr_is_enabled(mtrr_state) && msr != MSR_MTRRdefType)
@@ -372,10 +390,12 @@ static void set_var_mtrr_msr(struct kvm_vcpu *vcpu, u32 msr, u64 data)
 
 	/* add it to the list if it's enabled. */
 	if (var_mtrr_range_is_valid(cur)) {
+#define LIST_ENTRY_TYPE_INFO struct kvm_mtrr_range
 		list_for_each_entry(tmp, &mtrr_state->head, node)
 			if (cur->base >= tmp->base)
 				break;
 		list_add_tail(&cur->node, &tmp->node);
+#undef LIST_ENTRY_TYPE_INFO
 	}
 }
 
@@ -410,9 +430,9 @@ int kvm_mtrr_get_msr(struct kvm_vcpu *vcpu, u32 msr, u64 *pdata)
 		 * SMRR = 0
 		 * WC = 1
 		 * FIX = 1
-		 * VCNT = KVM_NR_VAR_MTRR
+		 * VCNT = kvm_NR_VAR_MTRR
 		 */
-		*pdata = 0x500 | KVM_NR_VAR_MTRR;
+		*pdata = 0x500 | 8;
 		return 0;
 	}
 
@@ -525,9 +545,11 @@ static void __mtrr_lookup_var_next(struct mtrr_iter *iter)
 {
 	struct kvm_mtrr *mtrr_state = iter->mtrr_state;
 
+#define LIST_ENTRY_TYPE_INFO struct kvm_mtrr_range
 	list_for_each_entry_continue(iter->range, &mtrr_state->head, node)
 		if (match_var_range(iter, iter->range))
 			return;
+#undef LIST_ENTRY_TYPE_INFO
 
 	iter->range = NULL;
 	iter->partial_map |= iter->start_max < iter->end;
@@ -540,7 +562,9 @@ static void mtrr_lookup_var_start(struct mtrr_iter *iter)
 	iter->fixed = false;
 	iter->start_max = iter->start;
 	iter->range = NULL;
+#define LIST_ENTRY_TYPE_INFO struct kvm_mtrr_range
 	iter->range = list_prepare_entry(iter->range, &mtrr_state->head, node);
+#undef LIST_ENTRY_TYPE_INFO
 
 	__mtrr_lookup_var_next(iter);
 }
@@ -557,9 +581,10 @@ static void mtrr_lookup_fixed_next(struct mtrr_iter *iter)
 	iter->index++;
 
 	/* have looked up for all fixed MTRRs. */
-	if (iter->index >= ARRAY_SIZE(iter->mtrr_state->fixed_ranges))
-		return mtrr_lookup_var_start(iter);
-
+	if (iter->index >= ARRAY_SIZE(iter->mtrr_state->fixed_ranges)) {
+		mtrr_lookup_var_start(iter);
+		return;
+	}
 	/* switch to next segment. */
 	if (iter->index > fixed_mtrr_seg_end_range_index(iter->seg))
 		iter->seg++;
@@ -696,7 +721,6 @@ u8 kvm_mtrr_get_guest_memory_type(struct kvm_vcpu *vcpu, gfn_t gfn)
 
 	return type;
 }
-EXPORT_SYMBOL_GPL(kvm_mtrr_get_guest_memory_type);
 
 bool kvm_mtrr_check_gfn_range_consistency(struct kvm_vcpu *vcpu, gfn_t gfn,
 					  int page_num)

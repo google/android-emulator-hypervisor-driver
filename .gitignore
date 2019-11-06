@@ -1,0 +1,5 @@
+__asm.inc
+gvm/.vs/*
+gvm/DriverTest/*
+**/x64/*
+cscope*

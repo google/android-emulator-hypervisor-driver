@@ -4,6 +4,7 @@
  * Copyright (c) 2003-2004 Fabrice Bellard
  * Copyright (c) 2007 Intel Corporation
  * Copyright 2009 Red Hat, Inc. and/or its affiliates.
+ * Copyright 2019 Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +27,11 @@
  *   Yaozu (Eddie) Dong <Eddie.dong@intel.com>
  *   Port from Qemu.
  */
-#include <linux/mm.h>
-#include <linux/slab.h>
-#include <linux/bitops.h>
 #include "irq.h"
-
 #include <linux/kvm_host.h>
-#include "trace.h"
+
+#include <ntddk.h>
+#include <gvm_types.h>
 
 #define pr_pic_unimpl(fmt, ...)	\
 	pr_err_ratelimited("kvm: pic: " fmt, ## __VA_ARGS__)
@@ -40,13 +39,11 @@
 static void pic_irq_request(struct kvm *kvm, int level);
 
 static void pic_lock(struct kvm_pic *s)
-	__acquires(&s->lock)
 {
 	spin_lock(&s->lock);
 }
 
 static void pic_unlock(struct kvm_pic *s)
-	__releases(&s->lock)
 {
 	bool wakeup = s->wakeup_needed;
 	struct kvm_vcpu *vcpu, *found = NULL;
@@ -67,7 +64,7 @@ static void pic_unlock(struct kvm_pic *s)
 		if (!found)
 			return;
 
-		kvm_make_request(KVM_REQ_EVENT, found);
+		kvm_make_request(GVM_REQ_EVENT, found);
 		kvm_vcpu_kick(found);
 	}
 }
@@ -84,7 +81,7 @@ static void pic_clear_isr(struct kvm_kpic_state *s, int irq)
 	 * it should be safe since PIC state is already updated at this stage.
 	 */
 	pic_unlock(s->pics_state);
-	kvm_notify_acked_irq(s->pics_state->kvm, SELECT_PIC(irq), irq);
+	//kvm_notify_acked_irq(s->pics_state->kvm, SELECT_PIC(irq), irq);
 	pic_lock(s->pics_state);
 }
 
@@ -199,8 +196,6 @@ int kvm_pic_set_irq(struct kvm_pic *s, int irq, int irq_source_id, int level)
 					 irq_source_id, level);
 	ret = pic_set_irq1(&s->pics[irq >> 3], irq & 7, irq_level);
 	pic_update_irq(s);
-	trace_kvm_pic_set_irq(irq >> 3, irq & 7, s->pics[irq >> 3].elcr,
-			      s->pics[irq >> 3].imr, ret == 0);
 	pic_unlock(s);
 
 	return ret;
@@ -620,16 +615,16 @@ struct kvm_pic *kvm_create_pic(struct kvm *kvm)
 	kvm_iodevice_init(&s->dev_slave, &picdev_slave_ops);
 	kvm_iodevice_init(&s->dev_eclr, &picdev_eclr_ops);
 	mutex_lock(&kvm->slots_lock);
-	ret = kvm_io_bus_register_dev(kvm, KVM_PIO_BUS, 0x20, 2,
+	ret = kvm_io_bus_register_dev(kvm, GVM_PIO_BUS, 0x20, 2,
 				      &s->dev_master);
 	if (ret < 0)
 		goto fail_unlock;
 
-	ret = kvm_io_bus_register_dev(kvm, KVM_PIO_BUS, 0xa0, 2, &s->dev_slave);
+	ret = kvm_io_bus_register_dev(kvm, GVM_PIO_BUS, 0xa0, 2, &s->dev_slave);
 	if (ret < 0)
 		goto fail_unreg_2;
 
-	ret = kvm_io_bus_register_dev(kvm, KVM_PIO_BUS, 0x4d0, 2, &s->dev_eclr);
+	ret = kvm_io_bus_register_dev(kvm, GVM_PIO_BUS, 0x4d0, 2, &s->dev_eclr);
 	if (ret < 0)
 		goto fail_unreg_1;
 
@@ -638,10 +633,10 @@ struct kvm_pic *kvm_create_pic(struct kvm *kvm)
 	return s;
 
 fail_unreg_1:
-	kvm_io_bus_unregister_dev(kvm, KVM_PIO_BUS, &s->dev_slave);
+	kvm_io_bus_unregister_dev(kvm, GVM_PIO_BUS, &s->dev_slave);
 
 fail_unreg_2:
-	kvm_io_bus_unregister_dev(kvm, KVM_PIO_BUS, &s->dev_master);
+	kvm_io_bus_unregister_dev(kvm, GVM_PIO_BUS, &s->dev_master);
 
 fail_unlock:
 	mutex_unlock(&kvm->slots_lock);
@@ -653,8 +648,8 @@ fail_unlock:
 
 void kvm_destroy_pic(struct kvm_pic *vpic)
 {
-	kvm_io_bus_unregister_dev(vpic->kvm, KVM_PIO_BUS, &vpic->dev_master);
-	kvm_io_bus_unregister_dev(vpic->kvm, KVM_PIO_BUS, &vpic->dev_slave);
-	kvm_io_bus_unregister_dev(vpic->kvm, KVM_PIO_BUS, &vpic->dev_eclr);
+	kvm_io_bus_unregister_dev(vpic->kvm, GVM_PIO_BUS, &vpic->dev_master);
+	kvm_io_bus_unregister_dev(vpic->kvm, GVM_PIO_BUS, &vpic->dev_slave);
+	kvm_io_bus_unregister_dev(vpic->kvm, GVM_PIO_BUS, &vpic->dev_eclr);
 	kfree(vpic);
 }
