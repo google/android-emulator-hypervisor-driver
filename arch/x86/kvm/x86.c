@@ -4760,6 +4760,7 @@ static int vcpu_run(struct kvm_vcpu *vcpu)
 			break;
 		}
 		if (test_and_clear_bit(0, (size_t *)&vcpu->run->user_event_pending)) {
+			r = 0;
 			vcpu->run->exit_reason = GVM_EXIT_INTR;
 			break;
 		}

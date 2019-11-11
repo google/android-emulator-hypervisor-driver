@@ -184,6 +184,8 @@ struct kvm_vcpu {
 	u64 blocked;
 	PETHREAD thread;
 	KAPC apc;
+	KTIMER run_timer;
+	KDPC run_timer_dpc;
 	struct kvm_vcpu_stat stat;
 	bool valid_wakeup;
 

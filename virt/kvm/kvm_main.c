@@ -246,6 +246,12 @@ void kvm_reload_remote_mmus(struct kvm *kvm)
 	kvm_make_all_cpus_request(kvm, GVM_REQ_MMU_RELOAD);
 }
 
+void kvm_vcpu_run_timer_func(KDPC *dpc, void* context, void *arg1, void *arg2)
+{
+	struct kvm_vcpu *vcpu = (struct kvm_vcpu *)context;
+	vcpu->run->user_event_pending = 1;
+}
+
 int kvm_vcpu_init(struct kvm_vcpu *vcpu, struct kvm *kvm, unsigned id)
 {
 	int r;
@@ -274,6 +280,8 @@ int kvm_vcpu_init(struct kvm_vcpu *vcpu, struct kvm *kvm, unsigned id)
 	vcpu->preempted = false;
 
 	KeInitializeEvent(&vcpu->kick_event, SynchronizationEvent, FALSE);
+	KeInitializeTimer(&vcpu->run_timer);
+	KeInitializeDpc(&vcpu->run_timer_dpc, kvm_vcpu_run_timer_func, vcpu);
 
 	r = kvm_arch_vcpu_init(vcpu);
 	if (r < 0)
@@ -2039,6 +2047,8 @@ NTSTATUS kvm_vcpu_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 	int r;
 	struct kvm_fpu *fpu = NULL;
 	struct kvm_sregs *kvm_sregs = NULL;
+	LARGE_INTEGER expire;
+	expire.QuadPart = (u64)-10000000;
 
 	if (vcpu->kvm->process != IoGetCurrentProcess())
 		return -EIO;
@@ -2056,7 +2066,15 @@ NTSTATUS kvm_vcpu_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 					KernelMode,
 					NULL);
 		}
+		/* vcpu_run has to return to user space periodically otherwise
+		 * vcpu thread could hang when process terminates.
+		 */
+		KeSetTimer(&vcpu->run_timer, expire, &vcpu->run_timer_dpc);
+
 		r = kvm_arch_vcpu_ioctl_run(vcpu, vcpu->run);
+
+		KeCancelTimer(&vcpu->run_timer);
+		KeInitializeTimer(&vcpu->run_timer);
 		break;
 	case GVM_VCPU_MMAP:
 		r = -EINVAL;
