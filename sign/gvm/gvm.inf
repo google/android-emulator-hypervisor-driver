@@ -13,8 +13,8 @@
 Signature = "$Windows NT$"
 Provider = Google
 Class = System
-ClassGuid = {4d36e97d-e325-11ce-bfc1-08002be10318}
-DriverVer = 09/11/2019,1.0.0.0
+ClassGuid = {7cf6fb1d-96cd-4358-8793-42f5b7033176}
+DriverVer = 11/13/2019,1.2.0.0
 DriverPackageType = KernelService
 CatalogFile = gvm.cat
 
@@ -43,9 +43,9 @@ gvm.sys = 1
 gvm.sys
 
 [gvm.Service]
-DisplayName    = gvm Service
+DisplayName    = Android Emulator Hypervisor Driver for AMD Processors Service
 ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
-StartType      = 3                  ; SERVICE_DEMAND_START
+StartType      = 1                  ; SERVICE_SYSTEM_START
 ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
 ServiceBinary  = %12%\gvm.sys
 
