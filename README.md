@@ -7,9 +7,25 @@ Android Emulator Hypervisor Driver for AMD Processors runs as a Windows driver.
 User space support for Android Emulator Hypervisor Driver for AMD Processors is
 available from Android Emulator.
 
-## Downloads
+## Download and Install
 Android Emulator Hypervisor Driver for AMD Processors is released through
-[android-studio].
+[android-studio]. However, only Android Studio with version 4.0 canary 5 or
+above can both download and install/update the driver. Otherwise, the Android
+Studio will only download the driver package without performing installation.
+In the latter case, users are required to install the driver manually.
+
+
+Prerequisite:
+1. CPU has virtualization extension and BIOS has NOT disabled the extension.
+2. Hyper-V must be disabled. Please be noted Hyper-V could be enabled silently
+by other Windows features, such as Credential Guard. Please consult Microsoft
+for detailed information.
+
+Install Instruction:  
+  
+Use an administrator command console to execute "silent_install.bat" inside
+the driver package. Make sure you see the desired output from the installer:
+STATE: 4 RUNNING
 
 ## Contributing
 If you would like to contribute a patch to the code base, please read
