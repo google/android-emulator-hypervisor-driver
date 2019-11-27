@@ -13,7 +13,7 @@
 Signature = "$Windows NT$"
 Provider = Google
 Class = System
-ClassGuid = {7cf6fb1d-96cd-4358-8793-42f5b7033176}
+ClassGuid = {4d36e97d-e325-11ce-bfc1-08002be10318}
 DriverVer = 11/13/2019,1.2.0.0
 DriverPackageType = KernelService
 CatalogFile = gvm.cat
