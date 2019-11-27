@@ -276,6 +276,7 @@ int kvm_vcpu_init(struct kvm_vcpu *vcpu, struct kvm *kvm, unsigned id)
 		r = -ENOMEM;
 		goto fail;
 	}
+	memset(vcpu->run, 0, 2 * PAGE_SIZE);
 
 	vcpu->preempted = false;
 
