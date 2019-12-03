@@ -522,7 +522,7 @@ static int kvm_init_mmu_notifier(struct kvm *kvm)
 
 #endif /* CONFIG_MMU_NOTIFIER && GVM_ARCH_WANT_MMU_NOTIFIER */
 
-static struct kvm_memslots *kvm_alloc_memslots(struct kvm *kvm)
+static struct kvm_memslots *kvm_alloc_memslots(void)
 {
 	int i;
 	struct kvm_memslots *slots;
@@ -536,10 +536,8 @@ static struct kvm_memslots *kvm_alloc_memslots(struct kvm *kvm)
 	 * code of handling generation number wrap-around.
 	 */
 	slots->generation = -150;
-	for (i = 0; i < GVM_MEM_SLOTS_NUM; i++) {
+	for (i = 0; i < GVM_MEM_SLOTS_NUM; i++)
 		slots->id_to_index[i] = slots->memslots[i].id = i;
-		slots->memslots[i].kvm = kvm;
-	}
 
 	return slots;
 }
@@ -624,7 +622,7 @@ static struct kvm *kvm_create_vm(size_t type)
 
 	r = -ENOMEM;
 	for (i = 0; i < GVM_ADDRESS_SPACE_NUM; i++) {
-		kvm->memslots[i] = kvm_alloc_memslots(kvm);
+		kvm->memslots[i] = kvm_alloc_memslots();
 		if (!kvm->memslots[i])
 			goto out_err_no_srcu;
 	}
@@ -691,7 +689,6 @@ static void kvm_destroy_vm(struct kvm *kvm)
 	kvm_arch_destroy_vm(kvm);
 	for (i = 0; i < GVM_ADDRESS_SPACE_NUM; i++)
 		kvm_free_memslots(kvm, kvm->memslots[i]);
-	kfree(kvm->rp_bitmap);
 	cleanup_srcu_struct(&kvm->irq_srcu);
 	cleanup_srcu_struct(&kvm->srcu);
 	kvm_arch_free_vm(kvm);
@@ -1299,25 +1296,6 @@ static int gvm_pin_user_memory(size_t addr, struct pmem_lock *pmem_lock)
 	return 0;
 }
 
-static int kvm_is_ram_prot(struct kvm* kvm, gfn_t gfn);
-static int kvm_should_ram_prot_exit(struct kvm *kvm, gfn_t gfn)
-{
-	struct kvm_vcpu* vcpu;
-
-	if (!kvm_is_ram_prot(kvm, gfn))
-		return 0;
-
-	/*
-	 * We assume get user pages always run
-	 * in the vcpu thread requesting that
-	 * page.
-	 */
-	vcpu = kvm_get_vcpu_by_thread(kvm, PsGetCurrentThread());
-	vcpu->run->exit_reason = GVM_EXIT_RAM_PROT; 
-	vcpu->run->rp.gfn = gfn; 
-	return 1;
-}
-
 kvm_pfn_t __gfn_to_pfn_memslot(struct kvm_memory_slot *slot, gfn_t gfn,
 			       bool atomic, bool *async, bool write_fault,
 			       bool *writable)
@@ -1345,9 +1323,6 @@ kvm_pfn_t __gfn_to_pfn_memslot(struct kvm_memory_slot *slot, gfn_t gfn,
 		*writable = false;
 		writable = NULL;
 	}
-
-	if (kvm_should_ram_prot_exit(slot->kvm, gfn))
-		return 0;
 
 	pmem_lock = &slot->pmem_lock[gfn - slot->base_gfn];
 	spin_lock(&pmem_lock->lock);
@@ -1416,9 +1391,6 @@ int gfn_to_pfn_many_atomic(struct kvm_memory_slot *slot, gfn_t gfn,
 		return 0;
 
 	for (i = 0; i < nr_pages; i++) {
-		if (kvm_should_ram_prot_exit(slot->kvm, gfn + i))
-			return 0;
-
 		pmem_lock = &slot->pmem_lock[gfn + i - slot->base_gfn];
 		spin_lock(&pmem_lock->lock);
 		if (!pmem_lock->lock_mdl) {
@@ -1936,109 +1908,6 @@ static int kvm_vm_ioctl_kick_vcpu(PDEVICE_OBJECT pDevObj, PIRP pIrp, void *arg)
 	return 0;
 }
 
-static bool kvm_is_valid_prot_flags(u32 flags)
-{
-	return (flags == RP_NOACCESS || flags == RP_RDWREX);
-}
-
-static int kvm_adjust_rp_bitmap(struct kvm *kvm, u64 size)
-{
-	int old_size, new_size;
-	size_t *old_bitmap, *new_bitmap;
-
-	if (kvm->rp_bitmap_size >= size)
-		return 0;
-
-	new_size = ALIGN(size, (u64)BITS_PER_LONG) / 8;
-	new_bitmap = kvm_kvzalloc(new_size);
-	if (!new_bitmap)
-		return -ENOMEM;
-
-	old_size = kvm->rp_bitmap_size;
-	old_bitmap = kvm->rp_bitmap;
-
-	memcpy(new_bitmap, old_bitmap, old_size);
-
-	kvm->rp_bitmap = new_bitmap;
-	kvm->rp_bitmap_size = new_size;
-
-	return 0;
-}
-
-/*
- * For set bulk bitmap instead of looping set_bit
- */
-static inline void set_bits_in_long(size_t *byte, int start, int nbits, bool set)
-{
-	size_t mask;
-
-	BUG_ON(byte == NULL);
-	BUG_ON(start < 0 || start > BITS_PER_LONG);
-	BUG_ON(nbits < 0 || start + nbits > BITS_PER_LONG);
-
-	mask = ((1 << nbits) - 1) << start;
-	if (set)
-		*byte |= mask;
-	else
-		*byte &= ~mask;
-}
-
-static void set_bit_block(size_t *bitmap, u64 start, u64 nbits, bool set)
-{
-    u64 first_long_index = start / BITS_PER_LONG;
-    u64 last_long_index = (start + nbits - 1) / BITS_PER_LONG;
-    u64 i;
-    int first_bit_index = (int)(start % BITS_PER_LONG);
-    int last_bit_index = (int)((start + nbits - 1) % BITS_PER_LONG);
-
-    if (first_long_index == last_long_index) {
-        set_bits_in_long(&bitmap[first_long_index], first_bit_index, (int)nbits,
-                         set);
-        return;
-    }
-
-    set_bits_in_long(&bitmap[first_long_index], first_bit_index,
-                     BITS_PER_LONG - first_bit_index, set);
-    for (i = first_long_index + 1; i < last_long_index; i++) {
-        bitmap[i] = set ? (size_t)-1 : 0;
-    }
-    set_bits_in_long(&bitmap[last_long_index], 0, last_bit_index + 1, set);
-}
-
-static int kvm_is_ram_prot(struct kvm *kvm, gfn_t gfn)
-{
-	if (!kvm->rp_bitmap)
-		return 0;
-
-	return test_bit(gfn, kvm->rp_bitmap);
-}
-
-static int kvm_vm_ioctl_ram_prot(struct kvm *kvm, struct gvm_ram_protect *rp)
-{
-	int r = -EFAULT;
-	gfn_t first_gfn = rp->pa >> PAGE_SHIFT;
-	gfn_t last_gfn = (rp->pa + rp->size - 1) >> PAGE_SHIFT;
-
-	if (!rp->reserved)
-		return -EINVAL;
-
-	if (!kvm_is_valid_prot_flags(rp->flags))
-		return -EINVAL;
-
-	r = kvm_adjust_rp_bitmap(kvm, last_gfn + 1);
-	if (r)
-		return r;
-
-	set_bit_block(kvm->rp_bitmap, first_gfn, last_gfn + 1 - first_gfn,
-			rp->flags == RP_NOACCESS);
-
-	/* only need flush shadow when page access right is lowered */
-	if (rp->flags == RP_NOACCESS)
-		kvm_arch_flush_shadow_all(kvm);
-
-	return 0;
-}
-
 NTSTATUS kvm_vcpu_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 			   unsigned int ioctl)
 {
@@ -2268,13 +2137,6 @@ NTSTATUS kvm_vm_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 	}
 	case GVM_KICK_VCPU:
 		r = kvm_vm_ioctl_kick_vcpu(pDevObj, pIrp, argp);
-		break;
-	case GVM_RAM_PROTECT:
-		struct gvm_ram_protect rp;
-
-		r = -EFAULT;
-		RtlCopyBytes(&rp, pIrp->AssociatedIrp.SystemBuffer, sizeof(rp));
-		r = kvm_vm_ioctl_ram_prot(kvm, &rp);
 		break;
 #ifdef CONFIG_HAVE_GVM_MSI
 	case GVM_SIGNAL_MSI: {

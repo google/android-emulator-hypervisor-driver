@@ -228,8 +228,6 @@ struct kvm_memory_slot {
 	u32 flags;
 	short id;
 	struct pmem_lock *pmem_lock;
-	/* A link back to KVM for rp_bitmap */
-	struct kvm *kvm;
 };
 
 #define ALIGN(x, mask)    (((x) + (mask - 1)) & ~(mask - 1))
@@ -308,8 +306,6 @@ struct kvm {
 	PEPROCESS process;
 	u64 vm_id;
 	struct kvm_memslots *memslots[GVM_ADDRESS_SPACE_NUM];
-	size_t *rp_bitmap;
-	u64 rp_bitmap_size;
 	struct kvm_vcpu *vcpus[GVM_MAX_VCPUS];
 
 	/*
@@ -388,20 +384,6 @@ static inline struct kvm_vcpu *kvm_get_vcpu_by_id(struct kvm *kvm, int id)
 		return vcpu;
 	kvm_for_each_vcpu(i, vcpu, kvm)
 		if (vcpu->vcpu_id == id)
-			return vcpu;
-	return NULL;
-}
-
-static inline struct kvm_vcpu *kvm_get_vcpu_by_thread(struct kvm *kvm,
-	       PETHREAD thread)
-{
-	struct kvm_vcpu *vcpu = NULL;
-	int i;
-
-	if (!thread < 0)
-		return NULL;
-	kvm_for_each_vcpu(i, vcpu, kvm)
-		if (vcpu->thread == thread)
 			return vcpu;
 	return NULL;
 }

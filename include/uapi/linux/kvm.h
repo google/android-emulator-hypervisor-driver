@@ -87,7 +87,6 @@ struct kvm_irqchip {
 #define GVM_EXIT_EPR              23
 #define GVM_EXIT_SYSTEM_EVENT     24
 #define GVM_EXIT_IOAPIC_EOI       26
-#define GVM_EXIT_RAM_PROT         27
 
 /* For GVM_EXIT_INTERNAL_ERROR */
 /* Emulate instruction failed. */
@@ -196,10 +195,6 @@ struct kvm_run {
 		struct {
 			__u8 vector;
 		} eoi;
-		/* GVM_EXIT_RAM_PROT */
-		struct {
-			__u64 gfn;
-		} rp;
 		/* Fix the size of the union. */
 		char padding[256];
 	};
@@ -470,15 +465,6 @@ struct kvm_msi {
 	__u8  pad[12];
 };
 
-#define RP_NOACCESS  0
-#define RP_RDWREX    7
-struct gvm_ram_protect {
-	__u64 pa;
-	__u64 size;
-	__u32 flags;
-	__u32 reserved;
-};
-
 /*
  * ioctls for VM fds
  */
@@ -498,7 +484,6 @@ struct gvm_ram_protect {
 #define GVM_SET_TSS_ADDR          _IO(KVMIO,   0x47)
 #define GVM_SET_IDENTITY_MAP_ADDR _IOW(KVMIO,  0x48, __u64)
 #define GVM_KICK_VCPU             _IO(KVMIO,   0x49)
-#define GVM_RAM_PROTECT           _IOW(KVMIO,  0x50, struct gvm_ram_protect)
 
 /* Device model IOC */
 #define GVM_CREATE_IRQCHIP        _IO(KVMIO,   0x60)
