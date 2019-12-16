@@ -542,34 +542,23 @@ static int has_svm(void)
 	return static_cpu_has(X86_FEATURE_SVM);
 }
 
-static inline void cpu_svm_disable(void)
-{
-	uint64_t efer;
-
-	wrmsrl(MSR_VM_HSAVE_PA, 0);
-	rdmsrl(MSR_EFER, efer);
-	wrmsrl(MSR_EFER, efer & ~EFER_SVME);
-}
-
 static void svm_hardware_disable(void)
 {
-	cpu_svm_disable();
-
 	//amd_pmu_disable_virt();
 }
 
+/*
+ * This does not turn on SVM as Linus does now, as on Windows coexistence with
+ * other VMMs is important and requires turning on/off SVM dynamically at run
+ * time.
+ */
 static int svm_hardware_enable(void)
 {
 
 	struct svm_cpu_data *sd;
-	uint64_t efer;
 	struct desc_ptr gdt_descr;
 	struct desc_struct *gdt;
 	int me = raw_smp_processor_id();
-
-	rdmsrl(MSR_EFER, efer);
-	if (efer & EFER_SVME)
-		return -EBUSY;
 
 	if (!has_svm()) {
 		pr_err("%s: err EOPNOTSUPP on %d\n", __func__, me);
@@ -588,11 +577,6 @@ static int svm_hardware_enable(void)
 	native_store_gdt(&gdt_descr);
 	gdt = (struct desc_struct *)gdt_descr.address;
 	sd->tss_desc = (struct kvm_ldttss_desc *)(gdt + GDT_ENTRY_TSS);
-
-	wrmsrl(MSR_EFER, efer | EFER_SVME);
-
-	wrmsrl(MSR_VM_HSAVE_PA, page_to_pfn(sd->save_area) << PAGE_SHIFT);
-
 
 	/*
 	 * Get OSVW bits.
@@ -4220,6 +4204,10 @@ static void svm_cancel_injection(struct kvm_vcpu *vcpu)
 static void svm_vcpu_run(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
+	int me = raw_smp_processor_id();
+	struct svm_cpu_data *sd;
+	uint64_t efer, hsave_pa = 0;
+	uint64_t svm_enabled;
 
 	svm->vmcb->save.rax = vcpu->arch.regs[VCPU_REGS_RAX];
 	svm->vmcb->save.rsp = vcpu->arch.regs[VCPU_REGS_RSP];
@@ -4237,6 +4225,15 @@ static void svm_vcpu_run(struct kvm_vcpu *vcpu)
 	sync_lapic_to_cr8(vcpu);
 
 	svm->vmcb->save.cr2 = vcpu->arch.cr2;
+
+	sd = per_cpu(svm_data, me);
+	rdmsrl(MSR_EFER, efer);
+	svm_enabled = !!(efer & EFER_SVME);
+	if (!svm_enabled)
+		wrmsrl(MSR_EFER, efer | EFER_SVME);
+	else
+		rdmsrl(MSR_VM_HSAVE_PA, hsave_pa);
+	wrmsrl(MSR_VM_HSAVE_PA, page_to_pfn(sd->save_area) << PAGE_SHIFT);
 
 	clgi();
 
@@ -4264,6 +4261,10 @@ static void svm_vcpu_run(struct kvm_vcpu *vcpu)
 		kvm_before_handle_nmi(&svm->vcpu);
 
 	stgi();
+
+	wrmsrl(MSR_VM_HSAVE_PA, hsave_pa);
+	if (!svm_enabled)
+		wrmsrl(MSR_EFER, efer);
 
 	/* Any pending NMI will happen here */
 
