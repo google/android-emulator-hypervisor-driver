@@ -38,6 +38,7 @@ extern void gvmWaitSuspend(
 extern long kvm_dev_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp, unsigned int ioctl);
 extern long kvm_vm_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp, unsigned int ioctl);
 extern long kvm_vcpu_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp, unsigned int ioctl);
+extern long kvm_vcpu_fast_ioctl_run(PDEVICE_OBJECT pDevObj);
 extern NTSTATUS gvmCreateVMDevice(PHANDLE pHandle, UINT32 vmNumber, INT32 vcpuNumber,
 	PVOID PrivData);
 extern NTSTATUS gvmDeleteVMDevice(PDEVICE_OBJECT pDevObj, UINT32 vmNumber, INT32 vcpuNumber);

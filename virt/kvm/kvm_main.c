@@ -1908,6 +1908,40 @@ static int kvm_vm_ioctl_kick_vcpu(PDEVICE_OBJECT pDevObj, PIRP pIrp, void *arg)
 	return 0;
 }
 
+NTSTATUS kvm_vcpu_fast_ioctl_run(PDEVICE_OBJECT pDevObj)
+{
+	struct gvm_device_extension *devext = pDevObj->DeviceExtension;
+	struct kvm_vcpu *vcpu = devext->PrivData;
+	LARGE_INTEGER expire;
+	expire.QuadPart = (u64)-10000000;
+	int r = -EINVAL;
+
+	if (vcpu->kvm->process != IoGetCurrentProcess())
+		return -EIO;
+
+	if (vcpu->thread != PsGetCurrentThread()) {
+		vcpu->thread = PsGetCurrentThread();
+		KeInitializeApc(&vcpu->apc, vcpu->thread,
+				OriginalApcEnvironment,
+				gvmWaitSuspend,
+				NULL,
+				NULL,
+				KernelMode,
+				NULL);
+	}
+	/* vcpu_run has to return to user space periodically otherwise
+	 * vcpu thread could hang when process terminates.
+	 */
+	KeSetTimer(&vcpu->run_timer, expire, &vcpu->run_timer_dpc);
+
+	r = kvm_arch_vcpu_ioctl_run(vcpu, vcpu->run);
+
+	KeCancelTimer(&vcpu->run_timer);
+	KeInitializeTimer(&vcpu->run_timer);
+
+	return r;
+}
+
 NTSTATUS kvm_vcpu_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 			   unsigned int ioctl)
 {

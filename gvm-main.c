@@ -252,6 +252,52 @@ out:
 	return rc;
 }
 
+static NTSTATUS gvmTranslateErrorcode(int r)
+{
+	switch (r) {
+	case -EINVAL:
+		return STATUS_INVALID_PARAMETER;
+	case -EAGAIN:
+		return STATUS_RETRY;
+	case -E2BIG:
+		return STATUS_BUFFER_OVERFLOW;
+	case -EFAULT:
+		return STATUS_INTERNAL_ERROR;
+	default:
+		break;
+	}
+
+	return r;
+}
+
+BOOLEAN gvmFastIoDeviceControl(
+		PFILE_OBJECT notused1,
+		BOOLEAN notused2,
+		PVOID notused3,
+		ULONG notused4,
+		PVOID notused5,
+		ULONG notused6,
+		ULONG ioctl,
+		PIO_STATUS_BLOCK pIoStatus,
+		PDEVICE_OBJECT pDevObj)
+{
+	struct gvm_device_extension *pDevExt;
+	NTSTATUS rc = STATUS_INVALID_PARAMETER;
+
+	/* Fast IO Device Control is only for run call */
+	if (ioctl != GVM_RUN)
+		return FALSE;
+
+	pDevExt = pDevObj->DeviceExtension;
+	if (pDevExt->DevType != GVM_DEVICE_VCPU)
+		return FALSE;
+
+	rc = kvm_vcpu_fast_ioctl_run(pDevObj);
+
+	pIoStatus->Status = gvmTranslateErrorcode(rc);
+	return TRUE;
+}
+
 NTSTATUS gvmDeviceControl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 {
 	NTSTATUS rc = STATUS_INVALID_PARAMETER;
@@ -281,22 +327,7 @@ NTSTATUS gvmDeviceControl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 		DbgPrint("gvm Device Control with incorrect device type!\n");
 	}
 
-	switch (rc) {
-	case -EINVAL:
-		rc = STATUS_INVALID_PARAMETER;
-		break;
-	case -EAGAIN:
-		rc = STATUS_RETRY;
-		break;
-	case -E2BIG:
-		rc = STATUS_BUFFER_OVERFLOW;
-		break;
-	case -EFAULT:
-		rc = STATUS_INTERNAL_ERROR;
-		break;
-	default:
-		break;
-	}
+	rc = gvmTranslateErrorcode(rc);
 
 	// Completing the device control
 	pIrp->IoStatus.Status = rc;
@@ -337,6 +368,7 @@ static void gvmPowerCallback(void *notused, void *arg1, void *arg2)
 	}
 }
 
+static FAST_IO_DISPATCH fastIoDispatch;
 NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 {
 	UNICODE_STRING DeviceName;
@@ -399,6 +431,12 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 	pDrvObj->MajorFunction[IRP_MJ_CREATE] = gvmDeviceCreate;
 	pDrvObj->MajorFunction[IRP_MJ_CLOSE] = gvmDeviceClose;
 	pDrvObj->MajorFunction[IRP_MJ_DEVICE_CONTROL] = gvmDeviceControl;
+
+	/* Windows Fast Io Device Control */
+	RtlZeroMemory(&fastIoDispatch, sizeof(FAST_IO_DISPATCH));
+	fastIoDispatch.SizeOfFastIoDispatch = sizeof(FAST_IO_DISPATCH);
+	fastIoDispatch.FastIoDeviceControl = gvmFastIoDeviceControl;
+	pDrvObj->FastIoDispatch = &fastIoDispatch;
 
 	/* Register callback for system sleep transitions.
 	 * According to OSR online document, the other way available
