@@ -1287,5 +1287,20 @@ static inline void xsetbv(u32 index, u64 value)
 	_xsetbv(index, value);
 }
 
+/*
+ * host cpu vendor
+ */
+extern char CPUString[13];
+
+static __inline bool is_Intel()
+{
+	return !strcmp("GenuineIntel", CPUString);
+}
+
+static __inline bool is_AMD()
+{
+	return !strcmp("AuthenticAMD", CPUString);
+}
+
 extern NTSTATUS NtKrUtilsInit(void);
 extern void NtKrUtilsExit(void);

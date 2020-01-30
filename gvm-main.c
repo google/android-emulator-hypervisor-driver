@@ -29,6 +29,7 @@ static PCALLBACK_OBJECT power_callback;
 static PVOID power_callback_handle;
 static int suspend;
 static atomic_t suspend_wait;
+char CPUString[13];
 
 DRIVER_INITIALIZE DriverEntry;
 
@@ -82,7 +83,6 @@ VOID gvmDriverUnload(PDRIVER_OBJECT pDrvObj)
 	//XXX: Clean up other devices?
 	PDEVICE_OBJECT pDevObj = pDrvObj->DeviceObject;
 	UNICODE_STRING DosDeviceName;
-	char CPUString[13];
 	unsigned int eax = 0;
 
 	if (power_callback_handle)
@@ -379,8 +379,6 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 	struct gvm_device_extension *pDevExt;
 	NTSTATUS rc;
 	int r;
-	char CPUString[13];
-	unsigned int eax = 0;
 
 	rc = NtKrUtilsInit();
 	if (!NT_SUCCESS(rc))
@@ -393,14 +391,9 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 		return STATUS_NO_MEMORY;
 	RtlZeroBytes(pZeroPage, PAGE_SIZE);
 
-	RtlZeroBytes(CPUString, 13);
-	cpuid(0, &eax,
-	      (unsigned int *)&CPUString[0],
-	      (unsigned int *)&CPUString[8],
-	      (unsigned int *)&CPUString[4]);
-	if (strcmp("GenuineIntel", CPUString) == 0)
+	if (is_Intel())
 		r = vmx_init();
-	else if (strcmp("AuthenticAMD", CPUString) == 0)
+	else if (is_AMD())
 		r = svm_init();
 	else {
 		DbgPrint("Processor %s is not supported\n", CPUString);

@@ -48,6 +48,7 @@ struct cpumask __cpu_online_mask;
 struct cpumask *cpu_online_mask = &__cpu_online_mask;
 unsigned int cpu_online_count;
 u64 max_pagen;
+char CPUString[13];
 
 DEFINE_PER_CPU(struct cpu_getput_cxt, cpu_getput_cxt);
 
@@ -536,6 +537,13 @@ NTSTATUS NtKrUtilsInit(void)
 	NTSTATUS rc;
 	int cpu;
 	PROCESSOR_NUMBER cpu_number;
+	unsigned int eax;
+
+	RtlZeroBytes(CPUString, 13);
+	cpuid(0, &eax,
+	      (unsigned int *)&CPUString[0],
+	      (unsigned int *)&CPUString[8],
+	      (unsigned int *)&CPUString[4]);
 
 	cpu_features_init();
 

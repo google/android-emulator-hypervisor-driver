@@ -1871,11 +1871,13 @@ static int kvm_vm_ioctl_create_vcpu(PDEVICE_OBJECT pDevObj, PIRP pIrp, void *arg
 	mutex_unlock(&kvm->lock);
 	kvm_arch_vcpu_postcreate(vcpu);
 
-	Affinity = (KAFFINITY)1 << (
-		cpu_online_count - 1
-		- 2 * vcpu->vcpu_id / cpu_online_count % 2
-		- vcpu->vcpu_id * 2 % cpu_online_count);
-	KeSetSystemAffinityThread(Affinity);
+	if (is_Intel()) {
+		Affinity = (KAFFINITY)1 << (
+			cpu_online_count - 1
+			- 2 * vcpu->vcpu_id / cpu_online_count % 2
+			- vcpu->vcpu_id * 2 % cpu_online_count);
+		KeSetSystemAffinityThread(Affinity);
+	}
 	return r;
 
 unlock_vcpu_destroy:
@@ -1914,6 +1916,7 @@ NTSTATUS kvm_vcpu_fast_ioctl_run(PDEVICE_OBJECT pDevObj)
 	struct kvm_vcpu *vcpu = devext->PrivData;
 	LARGE_INTEGER expire;
 	expire.QuadPart = (u64)-10000000;
+	KAFFINITY Affinity;
 	int r = -EINVAL;
 
 	if (vcpu->kvm->process != IoGetCurrentProcess())
@@ -1928,6 +1931,13 @@ NTSTATUS kvm_vcpu_fast_ioctl_run(PDEVICE_OBJECT pDevObj)
 				NULL,
 				KernelMode,
 				NULL);
+		if (is_Intel()) {
+			Affinity = (KAFFINITY)1 << (
+				cpu_online_count - 1
+				- 2 * vcpu->vcpu_id / cpu_online_count % 2
+				- vcpu->vcpu_id * 2 % cpu_online_count);
+			KeSetSystemAffinityThread(Affinity);
+		}
 	}
 	/* vcpu_run has to return to user space periodically otherwise
 	 * vcpu thread could hang when process terminates.
@@ -1959,26 +1969,7 @@ NTSTATUS kvm_vcpu_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 
 	switch (ioctl) {
 	case GVM_RUN:
-		r = -EINVAL;
-		if (vcpu->thread != PsGetCurrentThread()) {
-			vcpu->thread = PsGetCurrentThread();
-			KeInitializeApc(&vcpu->apc, vcpu->thread,
-					OriginalApcEnvironment,
-					gvmWaitSuspend,
-					NULL,
-					NULL,
-					KernelMode,
-					NULL);
-		}
-		/* vcpu_run has to return to user space periodically otherwise
-		 * vcpu thread could hang when process terminates.
-		 */
-		KeSetTimer(&vcpu->run_timer, expire, &vcpu->run_timer_dpc);
-
-		r = kvm_arch_vcpu_ioctl_run(vcpu, vcpu->run);
-
-		KeCancelTimer(&vcpu->run_timer);
-		KeInitializeTimer(&vcpu->run_timer);
+		r = kvm_vcpu_fast_ioctl_run(pDevObj);
 		break;
 	case GVM_VCPU_MMAP:
 		r = -EINVAL;
