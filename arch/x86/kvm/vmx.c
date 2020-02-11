@@ -309,7 +309,10 @@ static PMDL nested_get_page(struct kvm_vcpu *vcpu, gpa_t addr)
 	if (!mdl)
 		return NULL;
 
-	MmProbeAndLockPages(mdl, KernelMode, IoWriteAccess);
+	if (!__MmProbeAndLockPages(mdl, KernelMode, IoWriteAccess)) {
+		IoFreeMdl(mdl);
+		return NULL;
+	}
 
 	return mdl;
 }

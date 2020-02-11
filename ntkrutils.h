@@ -640,6 +640,20 @@ static __forceinline ktime_t hrtimer_get_remaining(const struct hrtimer *timer)
 }
 
 /*
+ * Wrap MmProbeAndLockPages
+ */
+static __inline bool __MmProbeAndLockPages(PMDL pmdl, KPROCESSOR_MODE mode,
+		LOCK_OPERATION op)
+{
+	__try {
+		MmProbeAndLockPages(pmdl, mode, op);
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		return false;
+	}
+	return true;
+}
+
+/*
  Memory Management Stuffs
  */
 
@@ -918,7 +932,10 @@ static __inline int get_user_pages_fast(size_t start, int nr_pages, int write,
 	if (!_mdl)
 		return 0;
 
-	MmProbeAndLockPages(_mdl, KernelMode, IoWriteAccess);
+	if (!__MmProbeAndLockPages(_mdl, KernelMode, IoWriteAccess)) {
+		IoFreeMdl(_mdl);
+		return 0;
+	}
 	*mdl = _mdl;
 
 	return nr_pages;
@@ -949,16 +966,17 @@ static __inline size_t __copy_user(void *dst, const void *src, size_t size,
 	       int from)
 {
 	PMDL lock_mdl;
-	HANDLE handle;
 	int clac = 0;
 
 	lock_mdl = IoAllocateMdl(from? src : dst, size, FALSE, FALSE, NULL);
 	if (!lock_mdl)
 		return size;
-	MmProbeAndLockPages(lock_mdl, UserMode, IoWriteAccess);
-	handle = MmSecureVirtualMemory(from? src : dst, size, PAGE_READWRITE);
-	if (!handle)
+
+	if (!__MmProbeAndLockPages(lock_mdl, UserMode, IoWriteAccess)) {
+		IoFreeMdl(lock_mdl);
 		return size;
+	}
+
 	/*
 	 * If Windows turns on SMAP, we need set AC flag before accessing
 	 * user addr. However, since we do not know Windows's logic for AC
@@ -980,7 +998,7 @@ static __inline size_t __copy_user(void *dst, const void *src, size_t size,
 		_clac();
 		local_irq_enable();
 	}
-	MmUnsecureVirtualMemory(handle);
+
 	MmUnlockPages(lock_mdl);
 	IoFreeMdl(lock_mdl);
 	return 0;

@@ -1291,8 +1291,11 @@ static int gvm_pin_user_memory(size_t addr, struct pmem_lock *pmem_lock)
 			FALSE, FALSE, NULL);
 	if (!pmem_lock->lock_mdl)
 		return -1;
-	MmProbeAndLockPages(pmem_lock->lock_mdl, UserMode,
-			IoWriteAccess);
+	if (!__MmProbeAndLockPages(pmem_lock->lock_mdl, UserMode,
+			IoWriteAccess)) {
+		IoFreeMdl(pmem_lock->lock_mdl);
+		return -1;
+	}
 	return 0;
 }
 

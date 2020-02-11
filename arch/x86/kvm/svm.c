@@ -2115,17 +2115,19 @@ static void *nested_svm_map(struct vcpu_svm *svm, u64 gpa, PMDL *_mdl)
 	if (!mdl)
 		goto error;
 
-	MmProbeAndLockPages(mdl, KernelMode, IoWriteAccess);
+	if (!__MmProbeAndLockPages(mdl, KernelMode, IoWriteAccess))
+		goto error1;
 
 	ret = kmap(mdl);
 	if (!ret)
-		goto error1;
+		goto error2;
 
 	*_mdl = mdl;
 	return ret;
 
-error1:
+error2:
 	MmUnlockPages(mdl);
+error1:
 	IoFreeMdl(mdl);
 error:
 	kvm_inject_gp(&svm->vcpu, 0);
