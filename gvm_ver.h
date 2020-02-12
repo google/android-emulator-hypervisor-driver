@@ -17,7 +17,7 @@
 #define _XSTR(str) _STR(str)
 
 #define GVM_MAJOR_VERSION 1
-#define GVM_MINOR_VERSION 3
+#define GVM_MINOR_VERSION 4
 
 #define GVM_VERSION ((GVM_MAJOR_VERSION << 16) | GVM_MINOR_VERSION)
 
