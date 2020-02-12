@@ -965,17 +965,7 @@ static __inline size_t copy_from_user(void *dst, const void *src, size_t size)
 static __inline size_t __copy_user(void *dst, const void *src, size_t size,
 	       int from)
 {
-	PMDL lock_mdl;
 	int clac = 0;
-
-	lock_mdl = IoAllocateMdl(from? src : dst, size, FALSE, FALSE, NULL);
-	if (!lock_mdl)
-		return size;
-
-	if (!__MmProbeAndLockPages(lock_mdl, UserMode, IoWriteAccess)) {
-		IoFreeMdl(lock_mdl);
-		return size;
-	}
 
 	/*
 	 * If Windows turns on SMAP, we need set AC flag before accessing
@@ -993,14 +983,18 @@ static __inline size_t __copy_user(void *dst, const void *src, size_t size,
 		} else
 			local_irq_enable();
 	}
-	memcpy(dst, src, size);
+
+	__try {
+		memcpy(dst, src, size);
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		return size;
+	}
+
 	if (clac) {
 		_clac();
 		local_irq_enable();
 	}
 
-	MmUnlockPages(lock_mdl);
-	IoFreeMdl(lock_mdl);
 	return 0;
 }
 
