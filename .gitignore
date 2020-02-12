@@ -3,3 +3,5 @@ gvm/.vs/*
 gvm/DriverTest/*
 **/x64/*
 cscope*
+Release
+gvm/gvm.vcxproj.user
