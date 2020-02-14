@@ -44,13 +44,13 @@ extern void svm_exit(void);
 extern int kvm_suspend(void);
 extern void kvm_resume(void);
 
-int gvmUpdateReturnBuffer(PIRP pIrp, size_t start, void *src, size_t size)
+int gvmUpdateReturnBuffer(PIRP pIrp, u32 start, void *src, u32 size)
 {
 	PIO_STACK_LOCATION pIoStack = IoGetCurrentIrpStackLocation(pIrp);
 	unsigned char *pBuff = pIrp->AssociatedIrp.SystemBuffer;
-	size_t buffSize = pIoStack->Parameters.DeviceIoControl.OutputBufferLength;
+	u32 buffSize = pIoStack->Parameters.DeviceIoControl.OutputBufferLength;
 
-	if ((start + size) > buffSize)
+	if (((u64)start + (u64)size) > buffSize)
 		return -E2BIG;
 
 	RtlCopyBytes(pBuff + start, src, size);

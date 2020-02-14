@@ -28,7 +28,7 @@ struct gvm_device_extension {
 
 extern PVOID pZeroPage;
 
-extern int gvmUpdateReturnBuffer(PIRP pIrp, size_t start, void *src, size_t size);
+extern int gvmUpdateReturnBuffer(PIRP pIrp, u32 start, void *src, u32 size);
 extern void gvmWaitSuspend(
 	_In_ PKAPC Apc,
 	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,
