@@ -24,7 +24,7 @@
 #define GVM_MAX_VCPUS 288
 #define GVM_SOFT_MAX_VCPUS 240
 #define GVM_MAX_VCPU_ID 1023
-#define GVM_USER_MEM_SLOTS 125
+#define GVM_USER_MEM_SLOTS 509
 /* memory slots that are not exposed to userspace */
 #define GVM_PRIVATE_MEM_SLOTS 3
 #define GVM_MEM_SLOTS_NUM (GVM_USER_MEM_SLOTS + GVM_PRIVATE_MEM_SLOTS)
