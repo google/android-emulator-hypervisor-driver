@@ -688,8 +688,33 @@ static void nested_vmx_entry_failure(struct kvm_vcpu *vcpu,
 			struct vmcs12 *vmcs12,
 			u32 reason, size_t qualification);
 
-#define __invvpid(a, b, c)
-#define __invept(a, b, c)
+static inline void __invvpid(int ext, u16 vpid, gva_t gva)
+{
+	struct {
+		u64 vpid : 16;
+		u64 rsvd : 48;
+		u64 gva;
+	} operand = { vpid, 0, gva };
+
+	__try {
+		__asm_invvpid(ext, &operand);
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		BUG();
+	}
+}
+
+static inline void __invept(int ext, u64 eptp, gpa_t gpa)
+{
+	struct {
+		u64 eptp, gpa;
+	} operand = {eptp, gpa};
+
+	__try {
+		__asm_invept(ext, &operand);
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		BUG();
+	}
+}
 
 static void vmcs_clear(struct vmcs *vmcs)
 {

@@ -168,3 +168,7 @@ static __forceinline void native_store_idt(void *idt)
 {
 	__sidt(idt);
 }
+
+extern void __asm_invvpid(int ext, void *op);
+extern void __asm_invept(int ext, void *op);
+

@@ -13,6 +13,7 @@
 ; from microsoft c++ compiler.
 include <__asm.inc>
 
+KeBugCheck PROTO STDCALL :DWORD
 public vmx_return
         .data
 vmx_return qword offset ret_from_nonroot
@@ -2208,6 +2209,24 @@ __write_dr7 proc
 	mov dr7, rcx
 	ret
 __write_dr7 endp
+
+__asm_invvpid proc
+	invvpid rcx, oword ptr[rdx]
+	ja invvpid_success
+	mov rcx, 00020001h
+	call KeBugCheck
+invvpid_success:
+	ret
+__asm_invvpid endp
+
+__asm_invept proc
+	invept rcx, oword ptr[rdx]
+	ja invept_success
+	mov rcx, 00020001h
+	call KeBugCheck
+invept_success:
+	ret
+__asm_invept endp
 
 __asm_svm_vcpu_run proc
 	;save abi non-volatile ergisters
