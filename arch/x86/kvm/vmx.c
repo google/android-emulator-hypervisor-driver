@@ -56,7 +56,7 @@ static bool vmm_exclusive = 1;
 
 static bool fasteoi = 1;
 
-static bool enable_apicv = 1;
+static bool enable_apicv = 0;
 
 static bool enable_shadow_vmcs = 0;
 /*
