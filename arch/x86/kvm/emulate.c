@@ -5219,7 +5219,12 @@ static int fastop(struct x86_emulate_ctxt *ctxt, void (*fop)(struct fastop *))
 	if (!(ctxt->d & ByteOp))
 		__fop += __ffs(ctxt->dst.bytes) * FASTOP_SIZE;
 
-	__asm_fastop(&flags, __fop, ctxt);
+	__try {
+		__asm_fastop(&flags, __fop, ctxt);
+	} __except(GetExceptionCode() == STATUS_INTEGER_DIVIDE_BY_ZERO ?
+		   EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
+		fop = NULL;
+	}
 
 	ctxt->eflags = (ctxt->eflags & ~EFLAGS_MASK) | (flags & EFLAGS_MASK);
 	if (!fop) /* exception is returned in fop variable */
