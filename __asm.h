@@ -126,16 +126,13 @@ extern void __bswap32(u32 *val);
 
 #define read_cr0 __readcr0
 #define read_cr3 __readcr3
+#define read_cr4 __readcr4
+#define write_cr4 __writecr4
 
 #define stts() __writecr0(__readcr0() | X86_CR0_TS)
 
 #define load_gdt(pdesc) _lgdt((void *)pdesc)
 #define load_idt(pdesc) __lidt((void *)pdesc)
-
-static __forceinline size_t cr4_read_shadow(void)
-{
-	return __readcr4();
-}
 
 static __forceinline void cr4_set_bits(size_t mask)
 {

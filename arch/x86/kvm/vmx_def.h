@@ -67,6 +67,15 @@ struct vmcs {
 	char data[1016];
 };
 
+#define FL_CR4_VMXE_BY_GVM		0x1
+#define FL_VMX_ON_BY_GVM		0x2
+struct cpu_vmx_data {
+	atomic_t count;
+	u32 flags;
+	struct vmcs *vmxarea;
+	u64 alien_vmcs;
+};
+
 /*
  * Track a VMCS that may be loaded on a certain CPU. If it is (cpu!=-1), also
  * remember whether it was VMLAUNCHed, and maintain a linked list of all VMCSs

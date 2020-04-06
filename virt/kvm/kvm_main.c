@@ -161,26 +161,6 @@ static void sort(void *base, size_t num, size_t size,
 	}
 }
 
-/*
- * Switches to specified vcpu, until a matching vcpu_put()
- */
-int vcpu_load(struct kvm_vcpu *vcpu)
-{
-	int cpu;
-
-	mutex_lock(&vcpu->mutex);
-	cpu = get_cpu();
-	kvm_arch_vcpu_load(vcpu, cpu);
-	return cpu;
-}
-
-void vcpu_put(struct kvm_vcpu *vcpu)
-{
-	kvm_arch_vcpu_put(vcpu);
-	put_cpu();
-	mutex_unlock(&vcpu->mutex);
-}
-
 void ack_flush(void *_completed)
 {
 }

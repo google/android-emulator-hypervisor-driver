@@ -52,8 +52,6 @@ static bool enable_ept_ad_bits = 1;
 
 static bool emulate_invalid_guest_state = true;
 
-static bool vmm_exclusive = 1;
-
 static bool fasteoi = 1;
 
 static bool enable_apicv = 0;
@@ -338,17 +336,9 @@ static void copy_vmcs12_to_shadow(struct vcpu_vmx *vmx);
 static void copy_shadow_to_vmcs12(struct vcpu_vmx *vmx);
 static int alloc_identity_pagetable(struct kvm *kvm);
 
-
-static DEFINE_PER_CPU(struct vmcs *, vmxarea);
+static DEFINE_PER_CPU(struct cpu_vmx_data, cpu_vmx_data);
 static DEFINE_PER_CPU(struct desc_ptr, host_gdt);
 static DEFINE_PER_CPU(struct desc_ptr, host_idt);
-
-/*
- * We maintian a per-CPU linked-list of vCPU, so in wakeup_handler() we
- * can find which vCPU should be waken up.
- */
-static DEFINE_PER_CPU(struct list_head, blocked_vcpu_on_cpu);
-static DEFINE_PER_CPU(spinlock_t, blocked_vcpu_on_cpu_lock);
 
 static size_t *vmx_io_bitmap_a;
 static size_t *vmx_io_bitmap_b;
@@ -793,17 +783,80 @@ static inline void ept_sync_context(u64 eptp)
 static void vmx_vcpu_load(struct kvm_vcpu *vcpu, int cpu);
 static void vmx_vcpu_put(struct kvm_vcpu *vcpu);
 
+/*
+ * vmx_acquire and vmx_release is designed for dynamically enabling/disabling
+ * vmx. This is helpful for vmm coexistence. Given that there are quite a
+ * few options on Windows (unlike Linux), we make this the default behavior.
+ * This dynamic behavior will require disabling preemption. Thus, codes between
+ * vmx_acquire and vmx_release should be as few as possible and no waits are
+ * allowed.
+ */
+static void vmx_acquire(struct kvm_vcpu* vcpu)
+{
+	int cpu;
+	size_t cr4;
+	struct cpu_vmx_data *cvd;
+
+	if (vcpu->thread && vcpu->thread != PsGetCurrentThread())
+		BUG();
+
+	preempt_disable();
+	cpu = smp_processor_id();
+	cvd = &per_cpu(cpu_vmx_data, cpu);
+	u64 va_phys_addr = __pa(cvd->vmxarea);
+
+	if (cvd->count++)
+		return;
+
+	cr4 = read_cr4();
+	if (!(cr4 & X86_CR4_VMXE)) {
+		cvd->flags |= FL_CR4_VMXE_BY_GVM;
+		write_cr4(cr4 | X86_CR4_VMXE);
+	}
+
+	if (__vmx_on(&va_phys_addr))
+		__vmx_vmptrst(&cvd->alien_vmcs);
+	else
+		cvd->flags |= FL_VMX_ON_BY_GVM;
+
+	vmcs_load(to_vmx(vcpu)->loaded_vmcs->vmcs);
+}
+
+static void vmx_release(struct kvm_vcpu* vcpu)
+{
+	int cpu;
+	struct cpu_vmx_data *cvd;
+
+	cpu = smp_processor_id();
+	cvd = &per_cpu(cpu_vmx_data, cpu);
+
+	if (--cvd->count)
+		return;
+
+	vmcs_clear(to_vmx(vcpu)->loaded_vmcs->vmcs);
+
+	if (cvd->flags & FL_VMX_ON_BY_GVM)
+		__vmx_off();
+	else {
+		if (cvd->alien_vmcs != (u64)(-1))
+			__vmx_vmptrld(&cvd->alien_vmcs);
+		goto out;
+	}
+
+	if (cvd->flags & FL_CR4_VMXE_BY_GVM)
+		cr4_clear_bits(X86_CR4_VMXE);
+ out:
+	cvd->flags = 0;
+	preempt_enable();
+}
+
 static __forceinline size_t __vmcs_readl(struct kvm_vcpu* vcpu, size_t field)
 {
 	size_t value;
 
-	preempt_disable();
-	vmcs_load(to_vmx(vcpu)->loaded_vmcs->vmcs);
-
+	vmx_acquire(vcpu);
 	__vmx_vmread(field, &value);
-
-	vmcs_clear(to_vmx(vcpu)->loaded_vmcs->vmcs);
-	preempt_enable();
+	vmx_release(vcpu);
 
 	return value;
 }
@@ -845,17 +898,13 @@ static __always_inline void __vmcs_writel(struct kvm_vcpu* vcpu, size_t field, s
 {
 	u8 error;
 
-	preempt_disable();
-	vmcs_load(to_vmx(vcpu)->loaded_vmcs->vmcs);
-
+	vmx_acquire(vcpu);
 	error = __vmx_vmwrite(field, value);
 	if (unlikely(error)) {
 		DbgBreakPoint();
 		vmwrite_error(vcpu, field, value);
 	}
-
-	vmcs_clear(to_vmx(vcpu)->loaded_vmcs->vmcs);
-	preempt_enable();
+	vmx_release(vcpu);
 }
 
 static __always_inline void vmcs_write16(struct kvm_vcpu* vcpu, size_t field, u16 value)
@@ -1331,11 +1380,10 @@ static void vmx_load_host_state(struct kvm_vcpu *vcpu)
 static void vmx_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
-	u64 phys_addr = __pa(per_cpu(vmxarea, cpu));
+	u64 phys_addr = __pa(per_cpu(cpu_vmx_data, cpu).vmxarea);
 	bool already_loaded = vmx->loaded_vmcs->cpu == cpu;
 
-	if (!vmm_exclusive)
-		kvm_cpu_vmxon(phys_addr);
+	kvm_cpu_vmxon(phys_addr);
 
 	if (!already_loaded) {
 		kvm_make_request(GVM_REQ_TLB_FLUSH, vcpu);
@@ -1351,9 +1399,6 @@ static void vmx_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 
 static void vmx_vcpu_put(struct kvm_vcpu *vcpu)
 {
-	if (!vmm_exclusive) {
-		kvm_cpu_vmxoff();
-	}
 }
 
 static void vmx_decache_cr0_guest_bits(struct kvm_vcpu *vcpu);
@@ -2171,15 +2216,7 @@ static void kvm_cpu_vmxon(u64 addr)
 
 static int hardware_enable(void)
 {
-	int cpu = raw_smp_processor_id();
-	u64 phys_addr = __pa(per_cpu(vmxarea, cpu));
 	u64 old, test_bits;
-
-	if (cr4_read_shadow() & X86_CR4_VMXE)
-		return -EBUSY;
-
-	INIT_LIST_HEAD(&per_cpu(blocked_vcpu_on_cpu, cpu));
-	spin_lock_init(&per_cpu(blocked_vcpu_on_cpu_lock, cpu));
 
 	rdmsrl(MSR_IA32_FEATURE_CONTROL, old);
 
@@ -2189,12 +2226,6 @@ static int hardware_enable(void)
 	if ((old & test_bits) != test_bits) {
 		/* enable and lock */
 		wrmsrl(MSR_IA32_FEATURE_CONTROL, old | test_bits);
-	}
-	cr4_set_bits(X86_CR4_VMXE);
-
-	if (vmm_exclusive) {
-		kvm_cpu_vmxon(phys_addr);
-		ept_sync_global();
 	}
 
 	native_store_gdt(this_cpu_ptr(&host_gdt));
@@ -2213,10 +2244,6 @@ static void kvm_cpu_vmxoff(void)
 
 static void hardware_disable(void)
 {
-	if (vmm_exclusive) {
-		kvm_cpu_vmxoff();
-	}
-	cr4_clear_bits(X86_CR4_VMXE);
 }
 
 static int adjust_vmx_controls(u32 ctl_min, u32 ctl_opt,
@@ -2461,8 +2488,8 @@ static void free_kvm_area(void)
 	int cpu;
 
 	for_each_possible_cpu(cpu) {
-		free_vmcs(per_cpu(vmxarea, cpu));
-		per_cpu(vmxarea, cpu) = NULL;
+		free_vmcs(per_cpu(cpu_vmx_data, cpu).vmxarea);
+		per_cpu(cpu_vmx_data, cpu).vmxarea = NULL;
 	}
 }
 
@@ -2514,7 +2541,7 @@ static int alloc_kvm_area(void)
 			return -ENOMEM;
 		}
 
-		per_cpu(vmxarea, cpu) = vmcs;
+		per_cpu(cpu_vmx_data, cpu).vmxarea = vmcs;
 	}
 	return 0;
 }
@@ -2712,7 +2739,9 @@ static inline void __vmx_flush_tlb(struct kvm_vcpu *vcpu, int vpid)
 	if (enable_ept) {
 		if (!VALID_PAGE(vcpu->arch.mmu.root_hpa))
 			return;
+		vmx_acquire(vcpu);
 		ept_sync_context(construct_eptp(vcpu->arch.mmu.root_hpa));
+		vmx_release(vcpu);
 	}
 }
 
@@ -2887,7 +2916,7 @@ static int vmx_set_cr4(struct kvm_vcpu *vcpu, size_t cr4)
 	 * this bit, even if host CR4.MCE == 0.
 	 */
 	size_t hw_cr4 =
-		(cr4_read_shadow() & X86_CR4_MCE) |
+		(read_cr4() & X86_CR4_MCE) |
 		(cr4 & ~X86_CR4_MCE) |
 		(to_vmx(vcpu)->rmode.vm86_active ?
 		 GVM_RMODE_VM_CR4_ALWAYS_ON : GVM_PMODE_VM_CR4_ALWAYS_ON);
@@ -3632,7 +3661,7 @@ static void vmx_set_constant_host_state(struct vcpu_vmx *vmx)
 	vmcs_writel(vcpu, HOST_CR3, read_cr3());  /* 22.2.3  FIXME: shadow tables */
 
 	/* Save the most likely value for this task's CR4 in the VMCS. */
-	cr4 = cr4_read_shadow();
+	cr4 = read_cr4();
 	vmcs_writel(vcpu, HOST_CR4, cr4);			/* 22.2.3, 22.2.5 */
 	vmx->host_state.vmcs_host_cr4 = cr4;
 
@@ -3778,6 +3807,8 @@ static int vmx_vcpu_setup(struct vcpu_vmx *vmx)
 #endif
 	struct kvm_vcpu *vcpu = &vmx->vcpu;
 
+	vmx_acquire(vcpu);
+
 	/* I/O */
 	vmcs_write64(vcpu, IO_BITMAP_A, __pa(vmx_io_bitmap_a));
 	vmcs_write64(vcpu, IO_BITMAP_B, __pa(vmx_io_bitmap_b));
@@ -3856,8 +3887,10 @@ static int vmx_vcpu_setup(struct vcpu_vmx *vmx)
 		vmcs_write16(vcpu, GUEST_PML_INDEX, PML_ENTITY_NUM - 1);
 	}
 
+	vmx_release(vcpu);
 	return 0;
 }
+
 static void vmx_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
@@ -7338,12 +7371,14 @@ static void __declspec(noinline) vmx_vcpu_run(struct kvm_vcpu *vcpu)
 		vmx->nested.sync_shadow_vmcs = false;
 	}
 
+	vmx_acquire(vcpu);
+
 	if (test_bit(VCPU_REGS_RSP, (size_t *)&vcpu->arch.regs_dirty))
 		vmcs_writel(vcpu, GUEST_RSP, vcpu->arch.regs[VCPU_REGS_RSP]);
 	if (test_bit(VCPU_REGS_RIP, (size_t *)&vcpu->arch.regs_dirty))
 		vmcs_writel(vcpu, GUEST_RIP, vcpu->arch.regs[VCPU_REGS_RIP]);
 
-	cr4 = cr4_read_shadow();
+	cr4 = read_cr4();
 	if (unlikely(cr4 != vmx->host_state.vmcs_host_cr4)) {
 		vmcs_writel(vcpu, HOST_CR4, cr4);
 		vmx->host_state.vmcs_host_cr4 = cr4;
@@ -7371,7 +7406,6 @@ static void __declspec(noinline) vmx_vcpu_run(struct kvm_vcpu *vcpu)
 		dump_vmcs(vcpu);
 		do_print1 = 0;
 	}
-	vmcs_load(vmx->loaded_vmcs->vmcs);
 
 	for (i = 0; i < m->nr; i++)
 		wrmsrl(m->guest[i].index, m->guest[i].value);
@@ -7381,8 +7415,6 @@ static void __declspec(noinline) vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	kvm_save_guest_fpu(vcpu);
 	for (i = 0; i < m->nr; i++)
 		wrmsrl(m->host[i].index, m->host[i].value);
-
-	vmcs_clear(vmx->loaded_vmcs->vmcs);
 
 	if (vcpu->vcpu_id == 0) {
 		last_vmexit_rip = vmcs_read64(vcpu, GUEST_RIP);
@@ -7424,6 +7456,8 @@ static void __declspec(noinline) vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	vmx->idt_vectoring_info = vmcs_read32(vcpu, IDT_VECTORING_INFO_FIELD);
 
 	vmx->exit_reason = vmcs_read32(vcpu, VM_EXIT_REASON);
+
+	vmx_release(vcpu);
 
 	/*
 	 * the GVM_REQ_EVENT optimization bit is only on for one entry, and if
@@ -7516,11 +7550,9 @@ static struct kvm_vcpu *vmx_create_vcpu(struct kvm *kvm, unsigned int id)
 	vmx->loaded_vmcs->shadow_vmcs = NULL;
 	if (!vmx->loaded_vmcs->vmcs)
 		goto free_pml;
-	if (!vmm_exclusive)
-		kvm_cpu_vmxon(__pa(per_cpu(vmxarea, raw_smp_processor_id())));
+	vmx_acquire(&vmx->vcpu);
 	loaded_vmcs_init(vmx->loaded_vmcs);
-	if (!vmm_exclusive)
-		kvm_cpu_vmxoff();
+	vmx_release(&vmx->vcpu);
 
 	err = vmx_vcpu_setup(vmx);
 	if (err)

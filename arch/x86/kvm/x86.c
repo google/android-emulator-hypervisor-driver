@@ -1386,17 +1386,6 @@ out:
 	return r;
 }
 
-void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
-{
-	kvm_x86_ops->vcpu_load(vcpu, cpu);
-	vcpu->cpu = cpu;
-}
-
-void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
-{
-	kvm_x86_ops->vcpu_put(vcpu);
-}
-
 static int kvm_vcpu_ioctl_get_lapic(struct kvm_vcpu *vcpu,
 				    struct kvm_lapic_state *s)
 {
