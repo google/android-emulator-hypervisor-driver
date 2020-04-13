@@ -7375,8 +7375,10 @@ static void __declspec(noinline) vmx_vcpu_run(struct kvm_vcpu *vcpu)
 
 	for (i = 0; i < m->nr; i++)
 		wrmsrl(m->guest[i].index, m->guest[i].value);
+	kvm_load_guest_fpu(vcpu);
 	/* Calls to low-level assembly functions*/
 	__asm_vmx_vcpu_run(vmx);
+	kvm_save_guest_fpu(vcpu);
 	for (i = 0; i < m->nr; i++)
 		wrmsrl(m->host[i].index, m->host[i].value);
 

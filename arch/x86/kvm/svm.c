@@ -4203,6 +4203,33 @@ static void svm_cancel_injection(struct kvm_vcpu *vcpu)
 	svm_complete_interrupts(svm);
 }
 
+static void svm_load_guest_fpu(struct kvm_vcpu *vcpu)
+{
+	uint64_t efer;
+
+	rdmsrl(MSR_EFER, efer);
+	wrmsrl(MSR_EFER, efer & ~EFER_FFXSR);
+
+	kvm_load_guest_fpu(vcpu);
+
+	if (efer & EFER_FFXSR)
+		wrmsrl(MSR_EFER, efer);
+}
+
+static void svm_save_guest_fpu(struct kvm_vcpu *vcpu)
+{
+	uint64_t efer;
+
+	rdmsrl(MSR_EFER, efer);
+	if (efer & EFER_FFXSR)
+		wrmsrl(MSR_EFER, efer & ~EFER_FFXSR);
+
+	kvm_save_guest_fpu(vcpu);
+
+	if (efer & EFER_FFXSR)
+		wrmsrl(MSR_EFER, efer);
+}
+
 static void svm_vcpu_run(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
@@ -4241,7 +4268,9 @@ static void svm_vcpu_run(struct kvm_vcpu *vcpu)
 
 	local_irq_enable();
 
+	svm_load_guest_fpu(vcpu);
 	__asm_svm_vcpu_run(svm);
+	svm_save_guest_fpu(vcpu);
 
 #ifdef CONFIG_X86_64
 	wrmsrl(MSR_GS_BASE, svm->host.gs_base);

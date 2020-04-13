@@ -4628,8 +4628,6 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 		vcpu->arch.switch_db_regs &= ~GVM_DEBUGREG_RELOAD;
 	}
 
-	kvm_load_guest_fpu(vcpu);
-
 	kvm_x86_ops->run(vcpu);
 
 	/*
@@ -4660,8 +4658,6 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 #endif
 
 	vcpu->arch.last_guest_tsc = kvm_read_l1_tsc(vcpu, rdtsc());
-
-	kvm_save_guest_fpu(vcpu);
 
 	//Set CPU to -1 since we don't know when we got scheduled to another
 	//cpu by Windows scheduler.
@@ -5322,31 +5318,14 @@ static inline void fpu_fxstore(union fpu_state *fpu)
 
 void kvm_load_guest_fpu(struct kvm_vcpu *vcpu)
 {
-	uint64_t efer;
-
-	rdmsrl(MSR_EFER, efer);
-	wrmsrl(MSR_EFER, efer & ~EFER_FFXSR);
-
 	fpu_fxsave(&vcpu->arch.host_fpu);
 	fpu_fxstore(&vcpu->arch.guest_fpu);
-
-	if (efer & EFER_FFXSR)
-		wrmsrl(MSR_EFER, efer);
 }
 
 void kvm_save_guest_fpu(struct kvm_vcpu *vcpu)
 {
-	uint64_t efer;
-
-	rdmsrl(MSR_EFER, efer);
-	if (efer & EFER_FFXSR)
-		wrmsrl(MSR_EFER, efer & ~EFER_FFXSR);
-
 	fpu_fxsave(&vcpu->arch.guest_fpu);
 	fpu_fxstore(&vcpu->arch.host_fpu);
-
-	if (efer & EFER_FFXSR)
-		wrmsrl(MSR_EFER, efer);
 }
 
 void kvm_arch_vcpu_free(struct kvm_vcpu *vcpu)
