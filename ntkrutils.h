@@ -962,10 +962,24 @@ static __inline size_t copy_from_user(void *dst, const void *src, size_t size)
 	return 0;
 }
 
-static __inline size_t __copy_user(void *dst, const void *src, size_t size,
+static __inline size_t __copy_user_safe(void *dst, const void *src, size_t size,
 	       int from)
 {
+	PMDL lock_mdl;
+	HANDLE handle;
+	size_t ret = size;
 	int clac = 0;
+
+	lock_mdl = IoAllocateMdl(from? src : dst, size, FALSE, FALSE, NULL);
+	if (!lock_mdl)
+		return size;
+
+	if (!__MmProbeAndLockPages(lock_mdl, UserMode, IoWriteAccess))
+		goto out_free;
+
+	handle = MmSecureVirtualMemory(from? src : dst, size, PAGE_READWRITE);
+	if (!handle)
+		goto out_unlock;
 
 	/*
 	 * If Windows turns on SMAP, we need set AC flag before accessing
@@ -984,15 +998,42 @@ static __inline size_t __copy_user(void *dst, const void *src, size_t size,
 			local_irq_enable();
 	}
 
-	__try {
-		memcpy(dst, src, size);
-	} __except (EXCEPTION_EXECUTE_HANDLER) {
-		return size;
-	}
+	memcpy(dst, src, size);
 
 	if (clac) {
 		_clac();
 		local_irq_enable();
+	}
+
+	ret = 0;
+	MmUnsecureVirtualMemory(handle);
+ out_unlock:
+	MmUnlockPages(lock_mdl);
+ out_free:
+	IoFreeMdl(lock_mdl);
+	return ret;;
+}
+
+static __inline size_t __copy_user(void *dst, const void *src, size_t size,
+	       int from)
+{
+	int clac = 0;
+
+	if (boot_cpu_has(X86_FEATURE_SMAP)) {
+		local_irq_disable();
+		if (__readcr4() & X86_CR4_SMAP &&
+		    !(__readeflags() & X86_EFLAGS_AC))
+			clac = 1;
+		local_irq_enable();
+	}
+
+	if (clac)
+		return __copy_user_safe(dst, src, size, from);
+
+	__try {
+		memcpy(dst, src, size);
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		return size;
 	}
 
 	return 0;
