@@ -7373,6 +7373,8 @@ static void __declspec(noinline) vmx_vcpu_run(struct kvm_vcpu *vcpu)
 
 	vmx_acquire(vcpu);
 
+	vmx_save_host_state(vcpu);
+
 	if (test_bit(VCPU_REGS_RSP, (size_t *)&vcpu->arch.regs_dirty))
 		vmcs_writel(vcpu, GUEST_RSP, vcpu->arch.regs[VCPU_REGS_RSP]);
 	if (test_bit(VCPU_REGS_RIP, (size_t *)&vcpu->arch.regs_dirty))
@@ -7456,6 +7458,8 @@ static void __declspec(noinline) vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	vmx->idt_vectoring_info = vmcs_read32(vcpu, IDT_VECTORING_INFO_FIELD);
 
 	vmx->exit_reason = vmcs_read32(vcpu, VM_EXIT_REASON);
+
+	vmx_load_host_state(vcpu);
 
 	vmx_release(vcpu);
 
@@ -9186,8 +9190,6 @@ static struct kvm_x86_ops vmx_x86_ops = {
 	.vcpu_free = vmx_free_vcpu,
 	.vcpu_reset = vmx_vcpu_reset,
 
-	.save_host_state = vmx_save_host_state,
-	.load_host_state = vmx_load_host_state,
 	.vcpu_load = vmx_vcpu_load,
 	.vcpu_put = vmx_vcpu_put,
 

@@ -4577,7 +4577,6 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 #ifdef HOST_STAT_DEBUG
 	save_host_stat_full(enter);
 #endif
-	kvm_x86_ops->save_host_state(vcpu);
 	vcpu->mode = IN_GUEST_MODE;
 	vcpu->cpu = smp_processor_id();
 
@@ -4593,7 +4592,6 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 	if (vcpu->mode == EXITING_GUEST_MODE || vcpu->requests) {
 		vcpu->mode = OUTSIDE_GUEST_MODE;
 		smp_wmb();
-		kvm_x86_ops->load_host_state(vcpu);
 		local_irq_enable();
 		vcpu->srcu_idx = srcu_read_lock(&vcpu->kvm->srcu);
 		r = 1;
@@ -4655,7 +4653,6 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 	smp_wmb();
 
 	kvm_put_guest_xcr0(vcpu);
-	kvm_x86_ops->load_host_state(vcpu);
 	kvm_x86_ops->vcpu_put(vcpu);
 
 #ifdef HOST_STAT_DEBUG

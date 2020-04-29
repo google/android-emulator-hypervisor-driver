@@ -1338,13 +1338,10 @@ static void svm_vcpu_put(struct kvm_vcpu *vcpu)
 static void svm_save_host_state(struct kvm_vcpu *vcpu)
 {
 	struct vcpu_svm *svm = to_svm(vcpu);
-	int cpu = smp_processor_id();
 	int i;
 
-	if (unlikely(cpu != vcpu->cpu)) {
-		svm->asid_generation = 0;
-		mark_all_dirty(svm->vmcb);
-	}
+	svm->asid_generation = 0;
+	mark_all_dirty(svm->vmcb);
 
 #ifdef CONFIG_X86_64
 	rdmsrl(MSR_GS_BASE, to_svm(vcpu)->host.gs_base);
@@ -4249,6 +4246,8 @@ static void svm_vcpu_run(struct kvm_vcpu *vcpu)
 	if (unlikely(svm->nested.exit_required))
 		return;
 
+	svm_save_host_state(vcpu);
+
 	pre_svm_run(svm);
 
 	sync_lapic_to_cr8(vcpu);
@@ -4322,6 +4321,8 @@ static void svm_vcpu_run(struct kvm_vcpu *vcpu)
 		svm_handle_mce(svm);
 
 	mark_all_clean(svm->vmcb);
+
+	svm_load_host_state(vcpu);
 }
 
 static void svm_set_cr3(struct kvm_vcpu *vcpu, size_t root)
@@ -4676,8 +4677,6 @@ static struct kvm_x86_ops svm_x86_ops = {
 	.vm_init = avic_vm_init,
 	.vm_destroy = avic_vm_destroy,
 
-	.save_host_state = svm_save_host_state,
-	.load_host_state = svm_load_host_state,
 	.vcpu_load = svm_vcpu_load,
 	.vcpu_put = svm_vcpu_put,
 	.vcpu_blocking = svm_vcpu_blocking,
