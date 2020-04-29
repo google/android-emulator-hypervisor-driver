@@ -1221,50 +1221,6 @@ size_t kvm_vcpu_gfn_to_hva_prot(struct kvm_vcpu *vcpu, gfn_t gfn, bool *writable
 	return gfn_to_hva_memslot_prot(slot, gfn, writable);
 }
 
-/*
- * The atomic path to get the writable pfn which will be stored in @pfn,
- * true indicates success, otherwise false is returned.
- */
-static bool __hva_to_pfn(size_t addr,
-			    bool write_fault, bool *writable, kvm_pfn_t *pfn)
-{
-	if (writable)
-		*writable = write_fault;
-
-	/* map read fault as writable if possible */
-	if (!write_fault && writable)
-		*writable = true;
-
-	*pfn = __pa((void *)addr) >> PAGE_SHIFT;
-
-	return true;
-}
-
-/*
- * Pin guest page in memory and return its pfn.
- * @addr: host virtual address which maps memory to the guest
- * @atomic: whether this function can sleep
- * @async: whether this function need to wait IO complete if the
- *         host page is not in the memory
- * @write_fault: whether we should get a writable host page
- * @writable: whether it allows to map a writable host page for !@write_fault
- *
- * The function will map a writable host page for these two cases:
- * 1): @write_fault = true
- * 2): @write_fault = false && @writable, @writable will tell the caller
- *     whether the mapping is writable.
- */
-static kvm_pfn_t hva_to_pfn(size_t addr,
-			bool write_fault, bool *writable)
-{
-	kvm_pfn_t pfn = 0;
-
-	if (__hva_to_pfn(addr, write_fault, writable, &pfn))
-		return pfn;
-
-	return GVM_PFN_ERR_FAULT;
-}
-
 static int gvm_pin_user_memory(size_t addr, struct pmem_lock *pmem_lock)
 {
 	pmem_lock->lock_mdl = IoAllocateMdl((PVOID)addr, PAGE_SIZE,
@@ -1274,6 +1230,7 @@ static int gvm_pin_user_memory(size_t addr, struct pmem_lock *pmem_lock)
 	if (!__MmProbeAndLockPages(pmem_lock->lock_mdl, UserMode,
 			IoWriteAccess)) {
 		IoFreeMdl(pmem_lock->lock_mdl);
+		pmem_lock->lock_mdl = NULL;
 		return -1;
 	}
 	return 0;
@@ -1318,7 +1275,14 @@ kvm_pfn_t __gfn_to_pfn_memslot(struct kvm_memory_slot *slot, gfn_t gfn,
 	}
 	spin_unlock(&pmem_lock->lock);
 
-	return hva_to_pfn(addr, write_fault, writable);
+	if (writable)
+		*writable = write_fault;
+
+	/* map read fault as writable if possible */
+	if (!write_fault && writable)
+		*writable = true;
+
+	return MmGetMdlPfnArray(pmem_lock->lock_mdl)[0];
 }
 
 kvm_pfn_t gfn_to_pfn_prot(struct kvm *kvm, gfn_t gfn, bool write_fault,
@@ -1388,8 +1352,10 @@ int gfn_to_pfn_many_atomic(struct kvm_memory_slot *slot, gfn_t gfn,
 
 	nr_pages = i;
 
-	while(i--)
-		pfn[i] = __pa((void*)(addr + i * PAGE_SIZE)) >> PAGE_SHIFT;
+	while(i--) {
+		pmem_lock = &slot->pmem_lock[gfn + i - slot->base_gfn];
+		pfn[i] = MmGetMdlPfnArray(pmem_lock->lock_mdl)[0];
+	}
 	return nr_pages;
 }
 
