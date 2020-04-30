@@ -5213,7 +5213,7 @@ extern void __asm_fastop(size_t *flags,void *fop,
 						struct x86_emulate_ctxt *ctxt);
 static int fastop(struct x86_emulate_ctxt *ctxt, void (*fop)(struct fastop *))
 {
-	size_t flags = (ctxt->eflags & EFLAGS_MASK) | X86_EFLAGS_IF;
+	size_t flags = ctxt->eflags & EFLAGS_MASK;
 	char *__fop = (char *)fop;
 
 	if (!(ctxt->d & ByteOp))

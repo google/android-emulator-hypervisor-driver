@@ -629,11 +629,17 @@ __asm_fastop      proc frame
 
 			; save host eflags
 			pushfq
-			push qword ptr[rdi]
+			mov r10, qword ptr[rdi]
+			mov r9, qword ptr[rsp]
+			and r9d, 0fffff72ah
+			or r10, r9
+			push r10
 			popfq
 			call rsi
 			pushfq
-			pop qword ptr[rdi]
+			pop r10
+			and r10, 8D5h ; keep status flags
+			mov qword ptr[rdi], r10
 			popfq
 
 			mov qword ptr CXT_TO_DST[r8], rax
@@ -645,12 +651,6 @@ __asm_fastop      proc frame
 			pop rbp
 			ret
 __asm_fastop      endp
-
-                public kvm_fastop_exception
-kvm_fastop_exception proc
-                xor     esi, esi
-                ret
-kvm_fastop_exception endp
 
 ; ---------------------------------------------------------------------------
                 align 8
