@@ -869,12 +869,11 @@ static __inline struct page *alloc_page(unsigned int gfp_mask)
 
 static __inline void __free_pages(struct page* page, unsigned int order)
 {
-	ExFreePoolWithTag(page->hva, GVM_POOL_TAG);
-
 	raw_spin_lock(&global_page_lock);
 	pglist[page->pfn] = 0;
 	raw_spin_unlock(&global_page_lock);
 
+	ExFreePoolWithTag(page->hva, GVM_POOL_TAG);
 	ExFreePoolWithTag(page, GVM_POOL_TAG);
 }
 
