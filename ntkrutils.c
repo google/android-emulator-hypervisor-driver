@@ -357,14 +357,17 @@ int smp_call_function_single(int cpu, void(*func)(void *info),
 	return 0;
 }
 
-
+static_assert(sizeof(KAFFINITYEX) <= 0x200, "KAFFINITYEX is bigger than 0x200");
 void smp_send_reschedule(int cpu)
 {
-	KAFFINITYEX target;
+	// This is to workaround the size change of KAFFINITY
+	// between Windows 10 releases
+	char __kaff[0x200];
+	PKAFFINITYEX target = (PKAFFINITYEX)&__kaff[0];
 
-	pKeInitializeAffinityEx(&target);
-	pKeAddProcessorAffinityEx(&target, cpu);
-	pHalRequestIpi(0, &target);
+	pKeInitializeAffinityEx(target);
+	pKeAddProcessorAffinityEx(target, cpu);
+	pHalRequestIpi(0, target);
 }
 
 enum cpuid_reg {
