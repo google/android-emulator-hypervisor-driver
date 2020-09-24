@@ -36,14 +36,13 @@ You are welcome to file an issue at [Issuetracker]. Please remember to supply
 your OS information, CPU model in addition to details on the issue.
 
 ## Notes
-At the time of open source releasing, user space support from [qemu] is NOT
-offered. But it should be straight forward if you need to port from Android
-Emulator to qemu.
+A patched QEMU can be found here at [github]. However, there is no support for
+it. Use at your own risk.
 
 As its name suggests, Android Emulator Hypervisor Driver for AMD Processors is
 developed and tested on AMD platform. We only make our best effort in keeping
 Intel Processor support.
 
 [android-studio]: https://developer.android.com/studio/index.html
-[qemu]: https://www.qemu.org/
+[github]: https://github.com/qemu-gvm/qemu-gvm
 [Issuetracker]: https://issuetracker.google.com/issues?q=componentid:192727
