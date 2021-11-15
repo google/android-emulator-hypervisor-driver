@@ -145,7 +145,7 @@ void hrtimer_init(struct hrtimer *timer, clockid_t clock_id, enum hrtimer_mode m
 	KeInitializeTimerEx(&timer->ktimer, SynchronizationTimer);
 	timer->base = &timer->base_hack;
 	timer->base->get_time = ktime_get;
-	KeInitializeDpc(&timer->kdpc, (PKDEFERRED_ROUTINE)timer_dpc_fn, timer);
+	KeInitializeThreadedDpc(&timer->kdpc, (PKDEFERRED_ROUTINE)timer_dpc_fn, timer);
 }
 
 int hrtimer_start(struct hrtimer *timer, ktime_t tim, const enum hrtimer_mode mode)
