@@ -4721,6 +4721,12 @@ static int vcpu_run(struct kvm_vcpu *vcpu)
 	vcpu->srcu_idx = srcu_read_lock(&kvm->srcu);
 
 	for (;;) {
+		if (test_and_clear_bit(0, (size_t *)&vcpu->run->user_event_pending)) {
+			r = 0;
+			vcpu->run->exit_reason = GVM_EXIT_INTR;
+			break;
+		}
+
 		if (kvm_vcpu_running(vcpu)) {
 			r = vcpu_enter_guest(vcpu);
 		} else {
@@ -4739,11 +4745,6 @@ static int vcpu_run(struct kvm_vcpu *vcpu)
 			r = 0;
 			vcpu->run->exit_reason = GVM_EXIT_IRQ_WINDOW_OPEN;
 			++vcpu->stat.request_irq_exits;
-			break;
-		}
-		if (test_and_clear_bit(0, (size_t *)&vcpu->run->user_event_pending)) {
-			r = 0;
-			vcpu->run->exit_reason = GVM_EXIT_INTR;
 			break;
 		}
 	}
