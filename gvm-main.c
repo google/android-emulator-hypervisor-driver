@@ -457,4 +457,5 @@ out_free2:
 	IoDeleteDevice(pDevObj);
 out_free1:
 	return rc;
+	// Great Project... Please accept my merge request!...
 }
