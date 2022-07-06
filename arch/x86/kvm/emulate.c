@@ -836,18 +836,33 @@ static __always_inline int do_insn_fetch_bytes(struct x86_emulate_ctxt *ctxt,
 }
 
 /* Fetch next part of the instruction being emulated. */
-#define __insn_fetch_type(_type)                        \
-static __always_inline int                              \
-  __insn_fetch_##_type(struct x86_emulate_ctxt *ctxt, _type *_x) \
-{                                                       \
-	int rc;                                             \
-	rc = do_insn_fetch_bytes(ctxt, sizeof(_type));      \
-	if (rc == X86EMUL_CONTINUE) {                       \
+#define __insn_fetch_type(_type)                                \
+static __always_inline int                                      \
+  __insn_fetch_##_type(struct x86_emulate_ctxt *ctxt, void *_x, unsigned _x_size) \
+{                                                               \
+	int rc;                                                 \
+	rc = do_insn_fetch_bytes(ctxt, sizeof(_type));          \
+	if (rc == X86EMUL_CONTINUE) {                           \
 		ctxt->_eip += sizeof(_type);                    \
-		*_x = *(_type *) ctxt->fetch.ptr;               \
+		switch (_x_size) {                              \
+		case 1:                                         \
+			*(u8 *)_x = *(_type *) ctxt->fetch.ptr; \
+			break;                                  \
+		case 2:                                         \
+			*(u16 *)_x = *(_type *) ctxt->fetch.ptr;\
+			break;                                  \
+		case 4:                                         \
+			*(u32 *)_x = *(_type *) ctxt->fetch.ptr;\
+			break;                                  \
+		case 8:                                         \
+			*(u64 *)_x = *(_type *) ctxt->fetch.ptr;\
+			break;                                  \
+		default:                                        \
+			BUG();                                  \
+		}                                               \
 		ctxt->fetch.ptr += sizeof(_type);               \
-	}                                                   \
-    return rc;                                          \
+	}                                                       \
+    return rc;                                                  \
 }
 
 __insn_fetch_type(u8)
@@ -859,7 +874,7 @@ __insn_fetch_type(s32)
 __insn_fetch_type(u64)
 __insn_fetch_type(s64)
 
-#define insn_fetch(_type, _ctxt, _data)  __insn_fetch_##_type(_ctxt, &(_type)_data)
+#define insn_fetch(_type, _ctxt, _data)  __insn_fetch_##_type(_ctxt, (void *)&_data, sizeof(_data))
 
 #define insn_fetch_modrmea(_type, _ctxt)                \
 	do {                                                \

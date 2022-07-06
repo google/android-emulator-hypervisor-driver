@@ -104,6 +104,10 @@
     <PreBuildEvent>
       <Command>$(SolutionDir)\..\build\asmgen\x64\$(Configuration)\asmgen.exe &gt; $(ProjectDir)..\__asm.inc</Command>
     </PreBuildEvent>
+    <DriverSign />
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -117,6 +121,10 @@
     <MASM>
       <IncludePaths>$(ProjectDir)..\;%(IncludePaths)</IncludePaths>
     </MASM>
+    <DriverSign />
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />

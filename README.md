@@ -27,6 +27,13 @@ Use an administrator command console to execute "silent_install.bat" inside
 the driver package. Make sure you see the desired output from the installer:
 STATE: 4 RUNNING
 
+## For Windows 7 users
+According to Microsoft, SHA1 driver signing is deprecated (Read more
+[here](https://docs.microsoft.com/en-us/windows-hardware/drivers/install/deprecation-of-software-publisher-certificates-and-commercial-release-certificates)
+). Version 1.8 (or above) cannot be loaded on Windows 7 by default. Please
+use version 1.7 instead. Users may disable driver signature enforcement in
+order to use version 1.8 or above.
+
 ## Contributing
 If you would like to contribute a patch to the code base, please read
 [these guidelines](CONTRIBUTING.md).

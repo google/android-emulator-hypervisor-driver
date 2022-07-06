@@ -734,6 +734,12 @@ static u32 msrs_to_save[] = {
 
 static unsigned num_msrs_to_save;
 
+static u32 emulated_msrs[] = {
+	MSR_IA32_SMBASE,
+};
+
+static unsigned num_emulated_msrs;
+
 bool kvm_valid_efer(struct kvm_vcpu *vcpu, u64 efer)
 {
 	if (efer & efer_reserved_bits)
@@ -1348,7 +1354,7 @@ long kvm_arch_dev_ioctl(struct gvm_device_extension *devext,
 
 		r = STATUS_SUCCESS;
 		n = msr_list->nmsrs;
-		__u32 nmsrs = num_msrs_to_save;
+		__u32 nmsrs = num_msrs_to_save + num_emulated_msrs;
 		r = gvmUpdateReturnBuffer(pIrp, 0, &nmsrs, sizeof(nmsrs));
 		if (r)
 			goto out;
@@ -1360,6 +1366,9 @@ long kvm_arch_dev_ioctl(struct gvm_device_extension *devext,
 
 		r = gvmUpdateReturnBuffer(pIrp, sizeof(nmsrs), &msrs_to_save,
 			num_msrs_to_save * sizeof(u32));
+
+		r = gvmUpdateReturnBuffer(pIrp, sizeof(nmsrs) + sizeof(u32) * num_msrs_to_save,
+			&emulated_msrs, num_emulated_msrs * sizeof(u32));
 		break;
 	}
 	case GVM_GET_SUPPORTED_CPUID:
@@ -2381,7 +2390,6 @@ static void kvm_init_msr_list(void)
 	}
 	num_msrs_to_save = j;
 
-#if 0
 	for (i = j = 0; i < ARRAY_SIZE(emulated_msrs); i++) {
 		switch (emulated_msrs[i]) {
 		case MSR_IA32_SMBASE:
@@ -2397,7 +2405,6 @@ static void kvm_init_msr_list(void)
 		j++;
 	}
 	num_emulated_msrs = j;
-#endif
 }
 
 static int vcpu_mmio_write(struct kvm_vcpu *vcpu, gpa_t addr, int len,
@@ -4721,6 +4728,12 @@ static int vcpu_run(struct kvm_vcpu *vcpu)
 	vcpu->srcu_idx = srcu_read_lock(&kvm->srcu);
 
 	for (;;) {
+		if (test_and_clear_bit(0, (size_t *)&vcpu->run->user_event_pending)) {
+			r = 0;
+			vcpu->run->exit_reason = GVM_EXIT_INTR;
+			break;
+		}
+
 		if (kvm_vcpu_running(vcpu)) {
 			r = vcpu_enter_guest(vcpu);
 		} else {
@@ -4739,11 +4752,6 @@ static int vcpu_run(struct kvm_vcpu *vcpu)
 			r = 0;
 			vcpu->run->exit_reason = GVM_EXIT_IRQ_WINDOW_OPEN;
 			++vcpu->stat.request_irq_exits;
-			break;
-		}
-		if (test_and_clear_bit(0, (size_t *)&vcpu->run->user_event_pending)) {
-			r = 0;
-			vcpu->run->exit_reason = GVM_EXIT_INTR;
 			break;
 		}
 	}
