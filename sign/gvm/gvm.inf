@@ -43,11 +43,11 @@ gvm.sys = 1
 gvm.sys
 
 [gvm.Service]
-DisplayName    = Android Emulator Hypervisor Driver for AMD Processors Service
+DisplayName    = Android Emulator Hypervisor Driver Service
 ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
 StartType      = 1                  ; SERVICE_SYSTEM_START
 ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
 ServiceBinary  = %12%\gvm.sys
 
 [Strings]
-DISK_NAME = "Android Emulator Hypervisor Driver for AMD Processors Installation Media"
+DISK_NAME = "Android Emulator Hypervisor Driver Installation Media"

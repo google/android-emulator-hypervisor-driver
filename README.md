@@ -1,16 +1,24 @@
-# Android Emulator Hypervisor Driver for AMD Processors
-Android Emulator Hypervisor Driver for AMD Processors is a hypervisor to
-accelerate [Android Emulator][android-studio]. It is made by porting KVM to
-Windows (Windows 7 or later, 64bit).
+# Android Emulator Hypervisor Driver
 
-Android Emulator Hypervisor Driver for AMD Processors runs as a Windows driver.
-User space support for Android Emulator Hypervisor Driver for AMD Processors is
-available from Android Emulator.
+Android Emulator Hypervisor Driver is a hypervisor to accelerate
+[Android Emulator][android-studio]. It is made by porting KVM to Windows
+(Windows 7 or later, 64bit).
+
+Android Emulator Hypervisor Driver runs as a Windows driver. User space
+support for Android Emulator Hypervisor Driver is available from Android
+Emulator.
+
+## Notice of the repository name change
+Android Emulator Hypervisor Driver for AMD Processors has been renamed to
+Android Emulator Hypervisor Driver to reflect the fact that it supports both
+Intel and AMD Processors. In fact, it supports Intel from version 1.0. The
+old name was chosen because Intel users were expected to continue using Intel
+HAXM.
 
 ## Download and Install
-Android Emulator Hypervisor Driver for AMD Processors is released through
-[android-studio]. However, only Android Studio with version 4.0 canary 5 or
-above can both download and install/update the driver. Otherwise, the Android
+Android Emulator Hypervisor Driver is released through [android-studio].
+However, only Android Studio with version 4.0 canary 5 or above can both
+download and install/update the driver. Otherwise, the Android
 Studio will only download the driver package without performing installation.
 In the latter case, users are required to install the driver manually.
 
@@ -45,10 +53,6 @@ your OS information, CPU model in addition to details on the issue.
 ## Notes
 A patched QEMU can be found here at [github]. However, there is no support for
 it. Use at your own risk.
-
-As its name suggests, Android Emulator Hypervisor Driver for AMD Processors is
-developed and tested on AMD platform. We only make our best effort in keeping
-Intel Processor support.
 
 [android-studio]: https://developer.android.com/studio/index.html
 [github]: https://github.com/qemu-gvm/qemu-gvm
