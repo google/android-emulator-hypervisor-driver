@@ -9,13 +9,13 @@
 
 #include <kvm/iodev.h>
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 struct kvm;
 struct kvm_vcpu;
 
-#define IOAPIC_NUM_PINS  GVM_IOAPIC_NUM_PINS
-#define MAX_NR_RESERVED_IOAPIC_PINS GVM_MAX_IRQ_ROUTES
+#define IOAPIC_NUM_PINS  AEHD_IOAPIC_NUM_PINS
+#define MAX_NR_RESERVED_IOAPIC_PINS AEHD_MAX_IRQ_ROUTES
 #define IOAPIC_VERSION_ID 0x11	/* IOAPIC version */
 #define IOAPIC_EDGE_TRIG  0
 #define IOAPIC_LEVEL_TRIG 1
@@ -44,13 +44,13 @@ struct kvm_vcpu;
 
 struct dest_map {
 	/* vcpu bitmap where IRQ has been sent */
-	DECLARE_BITMAP(map, GVM_MAX_VCPU_ID);
+	DECLARE_BITMAP(map, AEHD_MAX_VCPU_ID);
 
 	/*
 	 * Vector sent to a given vcpu, only valid when
 	 * the vcpu's bit in map is set
 	 */
-	u8 vectors[GVM_MAX_VCPU_ID];
+	u8 vectors[AEHD_MAX_VCPU_ID];
 };
 
 

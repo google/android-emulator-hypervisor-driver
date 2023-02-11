@@ -1,7 +1,7 @@
 __asm.inc
-gvm/.vs/*
-gvm/DriverTest/*
+aehd/.vs/*
+aehd/DriverTest/*
 **/x64/*
 cscope*
 Release
-gvm/gvm.vcxproj.user
+aehd/aehd.vcxproj.user

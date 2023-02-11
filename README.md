@@ -1,22 +1,22 @@
-# Android Emulator Hypervisor Driver
+# Android Emulator hypervisor driver
 
-Android Emulator Hypervisor Driver is a hypervisor to accelerate
+Android Emulator hypervisor driver is a hypervisor to accelerate
 [Android Emulator][android-studio]. It is made by porting KVM to Windows
 (Windows 7 or later, 64bit).
 
-Android Emulator Hypervisor Driver runs as a Windows driver. User space
-support for Android Emulator Hypervisor Driver is available from Android
+Android Emulator hypervisor driver runs as a Windows driver. User space
+support for Android Emulator hypervisor driver is available from Android
 Emulator.
 
 ## Notice of the repository name change
-Android Emulator Hypervisor Driver for AMD Processors has been renamed to
-Android Emulator Hypervisor Driver to reflect the fact that it supports both
+Android Emulator hypervisor driver for AMD Processors has been renamed to
+Android Emulator hypervisor driver to reflect the fact that it supports both
 Intel and AMD Processors. In fact, it supports Intel from version 1.0. The
 old name was chosen because Intel users were expected to continue using Intel
 HAXM.
 
 ## Download and Install
-Android Emulator Hypervisor Driver is released through [android-studio].
+Android Emulator hypervisor driver is released through [android-studio].
 However, only Android Studio with version 4.0 canary 5 or above can both
 download and install/update the driver. Otherwise, the Android
 Studio will only download the driver package without performing installation.

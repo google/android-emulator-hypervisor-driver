@@ -13,13 +13,13 @@
 
 #pragma once
 // assembly function declaration
-#include <gvm_types.h>
+#include <aehd_types.h>
 
-extern u16 gvm_read_ldt(void);
-extern void gvm_load_ldt(u16 sel);
+extern u16 aehd_read_ldt(void);
+extern void aehd_load_ldt(u16 sel);
 extern void load_TR_desc(void);
-extern u16 gvm_read_tr(void);
-extern void gvm_load_tr(u16 sel);
+extern u16 aehd_read_tr(void);
+extern void aehd_load_tr(u16 sel);
 
 #pragma warning(disable : 4210)
 #define savesegment(seg, value) \

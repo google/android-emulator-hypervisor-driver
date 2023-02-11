@@ -19,8 +19,8 @@
 .Set CompressionType=MSZIP
 .Set Cabinet=on
 .Set Compress=on
-.Set CabinetNameTemplate=gvm.cab
-.Set DestinationDir=gvm
+.Set CabinetNameTemplate=aehd.cab
+.Set DestinationDir=aehd
 ;Specify files to be included in cab file
-gvm.Inf
-gvm.Sys
+aehd.Inf
+aehd.Sys

@@ -21,30 +21,30 @@
 #include <ntkrutils.h>
 #include <__asm.h>
 
-#define GVM_MAX_VCPUS 288
-#define GVM_SOFT_MAX_VCPUS 240
-#define GVM_MAX_VCPU_ID 1023
-#define GVM_USER_MEM_SLOTS 509
+#define AEHD_MAX_VCPUS 288
+#define AEHD_SOFT_MAX_VCPUS 240
+#define AEHD_MAX_VCPU_ID 1023
+#define AEHD_USER_MEM_SLOTS 509
 /* memory slots that are not exposed to userspace */
-#define GVM_PRIVATE_MEM_SLOTS 3
-#define GVM_MEM_SLOTS_NUM (GVM_USER_MEM_SLOTS + GVM_PRIVATE_MEM_SLOTS)
+#define AEHD_PRIVATE_MEM_SLOTS 3
+#define AEHD_MEM_SLOTS_NUM (AEHD_USER_MEM_SLOTS + AEHD_PRIVATE_MEM_SLOTS)
 
-#define GVM_PIO_PAGE_OFFSET 1
+#define AEHD_PIO_PAGE_OFFSET 1
 
-#define GVM_IRQCHIP_NUM_PINS  GVM_IOAPIC_NUM_PINS
+#define AEHD_IRQCHIP_NUM_PINS  AEHD_IOAPIC_NUM_PINS
 
 /* x86-specific vcpu->requests bit members */
-#define GVM_REQ_REPORT_TPR_ACCESS  9
-#define GVM_REQ_TRIPLE_FAULT      10
-#define GVM_REQ_MMU_SYNC          11
-#define GVM_REQ_EVENT             14
-#define GVM_REQ_NMI               17
-#define GVM_REQ_PMU               18
-#define GVM_REQ_PMI               19
-#define GVM_REQ_SMI               20
-#define GVM_REQ_SCAN_IOAPIC       23
-#define GVM_REQ_GLOBAL_CLOCK_UPDATE 24
-#define GVM_REQ_APIC_PAGE_RELOAD  25
+#define AEHD_REQ_REPORT_TPR_ACCESS  9
+#define AEHD_REQ_TRIPLE_FAULT      10
+#define AEHD_REQ_MMU_SYNC          11
+#define AEHD_REQ_EVENT             14
+#define AEHD_REQ_NMI               17
+#define AEHD_REQ_PMU               18
+#define AEHD_REQ_PMI               19
+#define AEHD_REQ_SMI               20
+#define AEHD_REQ_SCAN_IOAPIC       23
+#define AEHD_REQ_GLOBAL_CLOCK_UPDATE 24
+#define AEHD_REQ_APIC_PAGE_RELOAD  25
 
 #define CR0_RESERVED_BITS                                               \
 	(~(size_t)(X86_CR0_PE | X86_CR0_MP | X86_CR0_EM | X86_CR0_TS \
@@ -72,15 +72,15 @@
 
 #define UNMAPPED_GVA (~(gpa_t)0)
 
-#define GVM_PERMILLE_MMU_PAGES 20
-#define GVM_MIN_ALLOC_MMU_PAGES 64
-#define GVM_MMU_HASH_SHIFT 10
-#define GVM_NUM_MMU_PAGES (1 << GVM_MMU_HASH_SHIFT)
-#define GVM_MIN_FREE_MMU_PAGES 5
-#define GVM_REFILL_PAGES 25
-#define GVM_MAX_CPUID_ENTRIES 80
-#define GVM_NR_FIXED_MTRR_REGION 88
-#define GVM_NR_VAR_MTRR 8
+#define AEHD_PERMILLE_MMU_PAGES 20
+#define AEHD_MIN_ALLOC_MMU_PAGES 64
+#define AEHD_MMU_HASH_SHIFT 10
+#define AEHD_NUM_MMU_PAGES (1 << AEHD_MMU_HASH_SHIFT)
+#define AEHD_MIN_FREE_MMU_PAGES 5
+#define AEHD_REFILL_PAGES 25
+#define AEHD_MAX_CPUID_ENTRIES 80
+#define AEHD_NR_FIXED_MTRR_REGION 88
+#define AEHD_NR_VAR_MTRR 8
 
 enum kvm_reg {
 	VCPU_REGS_RAX = 0,
@@ -125,9 +125,9 @@ enum {
 
 #include <asm/kvm_emulate.h>
 
-#define GVM_NR_MEM_OBJS 40
+#define AEHD_NR_MEM_OBJS 40
 
-#define GVM_NR_DB_REGS	4
+#define AEHD_NR_DB_REGS	4
 
 #define DR6_BD		(1 << 13)
 #define DR6_BS		(1 << 14)
@@ -157,7 +157,7 @@ enum {
 #define PFERR_PK_MASK (1U << PFERR_PK_BIT)
 
 /* apic attention bits */
-#define GVM_APIC_CHECK_VAPIC	0
+#define AEHD_APIC_CHECK_VAPIC	0
 
 struct kvm_kernel_irq_routing_entry;
 
@@ -167,7 +167,7 @@ struct kvm_kernel_irq_routing_entry;
  */
 struct kvm_mmu_memory_cache {
 	int nobjs;
-	void *objects[GVM_NR_MEM_OBJS];
+	void *objects[AEHD_NR_MEM_OBJS];
 };
 
 /*
@@ -310,8 +310,8 @@ struct kvm_mmu {
 };
 
 enum pmc_type {
-	GVM_PMC_GP = 0,
-	GVM_PMC_FIXED,
+	AEHD_PMC_GP = 0,
+	AEHD_PMC_FIXED,
 };
 
 struct kvm_pmc {
@@ -344,9 +344,9 @@ struct kvm_pmu {
 struct kvm_pmu_ops;
 
 enum {
-	GVM_DEBUGREG_BP_ENABLED = 1,
-	GVM_DEBUGREG_WONT_EXIT = 2,
-	GVM_DEBUGREG_RELOAD = 4,
+	AEHD_DEBUGREG_BP_ENABLED = 1,
+	AEHD_DEBUGREG_WONT_EXIT = 2,
+	AEHD_DEBUGREG_RELOAD = 4,
 };
 
 struct kvm_mtrr_range {
@@ -356,8 +356,8 @@ struct kvm_mtrr_range {
 };
 
 struct kvm_mtrr {
-	struct kvm_mtrr_range var_ranges[GVM_NR_VAR_MTRR];
-	mtrr_type fixed_ranges[GVM_NR_FIXED_MTRR_REGION];
+	struct kvm_mtrr_range var_ranges[AEHD_NR_VAR_MTRR];
+	mtrr_type fixed_ranges[AEHD_NR_FIXED_MTRR_REGION];
 	u64 deftype;
 
 	struct list_head head;
@@ -450,7 +450,7 @@ struct kvm_vcpu_arch {
 	int halt_request; /* real mode on Intel only */
 
 	int cpuid_nent;
-	struct kvm_cpuid_entry cpuid_entries[GVM_MAX_CPUID_ENTRIES];
+	struct kvm_cpuid_entry cpuid_entries[AEHD_MAX_CPUID_ENTRIES];
 
 	int maxphyaddr;
 
@@ -479,10 +479,10 @@ struct kvm_vcpu_arch {
 	u64 pat;
 
 	unsigned switch_db_regs;
-	size_t db[GVM_NR_DB_REGS];
+	size_t db[AEHD_NR_DB_REGS];
 	size_t dr6;
 	size_t dr7;
-	size_t eff_db[GVM_NR_DB_REGS];
+	size_t eff_db[AEHD_NR_DB_REGS];
 	size_t guest_debug_dr7;
 
 	/* Cache MMIO info */
@@ -531,9 +531,9 @@ struct kvm_arch_memory_slot {
  * configured for multiple modes; in that case, we cannot use the map and
  * hence cannot use kvm_irq_delivery_to_apic_fast either.
  */
-#define GVM_APIC_MODE_XAPIC_CLUSTER          4
-#define GVM_APIC_MODE_XAPIC_FLAT             8
-#define GVM_APIC_MODE_X2APIC                16
+#define AEHD_APIC_MODE_XAPIC_CLUSTER          4
+#define AEHD_APIC_MODE_XAPIC_FLAT             8
+#define AEHD_APIC_MODE_X2APIC                16
 
 struct kvm_apic_map {
 	u8 mode;
@@ -551,7 +551,7 @@ struct kvm_arch {
 	unsigned int n_max_mmu_pages;
 	unsigned int indirect_shadow_pages;
 	size_t mmu_valid_gen;
-	struct hlist_head mmu_page_hash[GVM_NUM_MMU_PAGES];
+	struct hlist_head mmu_page_hash[AEHD_NUM_MMU_PAGES];
 	/*
 	 * Hash table of struct kvm_mmu_page.
 	 */
@@ -583,7 +583,7 @@ struct kvm_arch {
 	/* reads protected by irq_srcu, writes by irq_lock */
 	struct hlist_head mask_notifier_list;
 
-	#ifdef CONFIG_GVM_MMU_AUDIT
+	#ifdef CONFIG_AEHD_MMU_AUDIT
 	int audit_point;
 	#endif
 
@@ -991,12 +991,12 @@ static inline struct kvm_mmu_page *page_header(hpa_t shadow_page)
 
 static inline u16 kvm_read_ldt(void)
 {
-	return gvm_read_ldt();
+	return aehd_read_ldt();
 }
 
 static inline void kvm_load_ldt(u16 sel)
 {
-	gvm_load_ldt(sel);
+	aehd_load_ldt(sel);
 }
 
 #ifdef CONFIG_X86_64
@@ -1056,13 +1056,13 @@ enum {
 #define HF_SMM_MASK		(1 << 6)
 #define HF_SMM_INSIDE_NMI_MASK	(1 << 7)
 
-#define __GVM_VCPU_MULTIPLE_ADDRESS_SPACE
-#define GVM_ADDRESS_SPACE_NUM 2
+#define __AEHD_VCPU_MULTIPLE_ADDRESS_SPACE
+#define AEHD_ADDRESS_SPACE_NUM 2
 
 #define kvm_arch_vcpu_memslots_id(vcpu) ((vcpu)->arch.hflags & HF_SMM_MASK ? 1 : 0)
 #define kvm_memslots_for_spte_role(kvm, role) __kvm_memslots(kvm, (role).smm)
 
-#define GVM_ARCH_WANT_MMU_NOTIFIER
+#define AEHD_ARCH_WANT_MMU_NOTIFIER
 int kvm_unmap_hva(struct kvm *kvm, size_t hva);
 int kvm_unmap_hva_range(struct kvm *kvm, size_t start, size_t end);
 int kvm_age_hva(struct kvm *kvm, size_t start, size_t end);

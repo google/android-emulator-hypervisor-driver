@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-#include <gvm_ver.h>
+#include <aehd_ver.h>
 #include <windows.h>
 
 #define VER_DEBUG                   2
@@ -24,18 +24,18 @@
 #define VER_FILESUBTYPE             VFT2_DRV_SYSTEM
 
 #define VER_COMPANYNAME_STR         "Google LLC"
-#define VER_PRODUCTNAME_STR         "Android Emulator Hypervisor Driver"
+#define VER_PRODUCTNAME_STR         "Android Emulator hypervisor driver"
 #define VER_LEGALCOPYRIGHT_YEARS    "2019"
 #define VER_LEGALCOPYRIGHT_STR      "Copyright (c) " VER_LEGALCOPYRIGHT_YEARS " " VER_COMPANYNAME_STR
 #define VER_LEGALTRADEMARKS_STR     VER_LEGALCOPYRIGHT_STR
 
-#define VER_PRODUCTVERSION          GVM_RC_VERSION
-#define VER_PRODUCTVERSION_STR      GVM_RC_VERSION_STR
+#define VER_PRODUCTVERSION          AEHD_RC_VERSION
+#define VER_PRODUCTVERSION_STR      AEHD_RC_VERSION_STR
 #define VER_PRODUCTVERSION_W        (0x0200)
 #define VER_PRODUCTVERSION_DW       (0x0200)
-#define VER_FILEDESCRIPTION_STR     "Android Emulator Hypervisor Driver"
-#define VER_INTERNALNAME_STR        "Android Emulator Hypervisor Driver"
-#define VER_ORIGINALFILENAME_STR    "gvm.sys"
+#define VER_FILEDESCRIPTION_STR     "Android Emulator hypervisor driver"
+#define VER_INTERNALNAME_STR        "Android Emulator hypervisor driver"
+#define VER_ORIGINALFILENAME_STR    "aehd.sys"
 
 #include "common.ver"
 

@@ -8,9 +8,9 @@
 /* We don't want to include ntkrutil.h here as we do in other
  * places, because nrktutil.h depends on list.h.
  * So this header should be made to work with all dependencies
- * in gvm_types.h.
+ * in aehd_types.h.
  */
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 /*
 * These are non-NULL pointers that will result in page faults

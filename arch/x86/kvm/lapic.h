@@ -12,15 +12,15 @@
 #include <ntkrutils.h>
 #include <asm/apicdef.h>
 #include <asm/msr-index.h>
-#include <gvm_types.h>
+#include <aehd_types.h>
 #include <ntkrutils.h>
 
-#define GVM_APIC_INIT		0
-#define GVM_APIC_SIPI		1
-#define GVM_APIC_LVT_NUM	6
+#define AEHD_APIC_INIT		0
+#define AEHD_APIC_SIPI		1
+#define AEHD_APIC_LVT_NUM	6
 
-#define GVM_APIC_SHORT_MASK	0xc0000
-#define GVM_APIC_DEST_MASK	0x800
+#define AEHD_APIC_SHORT_MASK	0xc0000
+#define AEHD_APIC_DEST_MASK	0x800
 
 #define u32 unsigned int
 
@@ -182,7 +182,7 @@ static inline bool kvm_lowest_prio_delivery(struct kvm_lapic_irq *irq)
 
 static inline int kvm_lapic_latched_init(struct kvm_vcpu *vcpu)
 {
-	return lapic_in_kernel(vcpu) && test_bit(GVM_APIC_INIT, &vcpu->arch.apic->pending_events);
+	return lapic_in_kernel(vcpu) && test_bit(AEHD_APIC_INIT, &vcpu->arch.apic->pending_events);
 }
 
 static inline u32 kvm_apic_id(struct kvm_lapic *apic)

@@ -31,7 +31,7 @@ struct kvm_memslots;
 
 enum kvm_mr_change;
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 /*
  * Address types:

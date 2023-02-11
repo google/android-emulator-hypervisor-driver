@@ -29,7 +29,7 @@
 #include "lapic.h"
 #include "x86.h"
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 static int kvm_set_pic_irq(struct kvm_kernel_irq_routing_entry *e,
 			   struct kvm *kvm, int irq_source_id, int level,
@@ -40,7 +40,7 @@ static int kvm_set_pic_irq(struct kvm_kernel_irq_routing_entry *e,
 	/*
 	 * XXX: rejecting pic routes when pic isn't in use would be better,
 	 * but the default routing table is installed while kvm->arch.vpic is
-	 * NULL and GVM_CREATE_IRQCHIP can race with GVM_IRQ_LINE.
+	 * NULL and AEHD_CREATE_IRQCHIP can race with AEHD_IRQ_LINE.
 	 */
 	if (!pic)
 		return -1;
@@ -66,7 +66,7 @@ int kvm_irq_delivery_to_apic(struct kvm *kvm, struct kvm_lapic *src,
 {
 	int i, r = -1;
 	struct kvm_vcpu *vcpu, *lowest = NULL;
-	size_t dest_vcpu_bitmap[BITS_TO_LONGS(GVM_MAX_VCPUS)];
+	size_t dest_vcpu_bitmap[BITS_TO_LONGS(AEHD_MAX_VCPUS)];
 	unsigned int dest_vcpus = 0;
 
 	if (irq->dest_mode == 0 && irq->dest_id == 0xff &&
@@ -107,7 +107,7 @@ int kvm_irq_delivery_to_apic(struct kvm *kvm, struct kvm_lapic *src,
 
 	if (dest_vcpus != 0) {
 		int idx = kvm_vector_to_index(irq->vector, dest_vcpus,
-					dest_vcpu_bitmap, GVM_MAX_VCPUS);
+					dest_vcpu_bitmap, AEHD_MAX_VCPUS);
 
 		lowest = kvm_get_vcpu(kvm, idx);
 	}
@@ -167,7 +167,7 @@ int kvm_arch_set_irq_inatomic(struct kvm_kernel_irq_routing_entry *e,
 	int r;
 
 	switch (e->type) {
-	case GVM_IRQ_ROUTING_MSI:
+	case AEHD_IRQ_ROUTING_MSI:
 		if (kvm_msi_route_invalid(kvm, e))
 			return -EINVAL;
 
@@ -198,7 +198,7 @@ int kvm_request_irq_source_id(struct kvm *kvm)
 		goto unlock;
 	}
 
-	ASSERT(irq_source_id != GVM_USERSPACE_IRQ_SOURCE_ID);
+	ASSERT(irq_source_id != AEHD_USERSPACE_IRQ_SOURCE_ID);
 	set_bit(irq_source_id, bitmap);
 unlock:
 	mutex_unlock(&kvm->irq_lock);
@@ -208,7 +208,7 @@ unlock:
 
 void kvm_free_irq_source_id(struct kvm *kvm, int irq_source_id)
 {
-	ASSERT(irq_source_id != GVM_USERSPACE_IRQ_SOURCE_ID);
+	ASSERT(irq_source_id != AEHD_USERSPACE_IRQ_SOURCE_ID);
 
 	mutex_lock(&kvm->irq_lock);
 	if (irq_source_id < 0 ||
@@ -269,20 +269,20 @@ int kvm_set_routing_entry(struct kvm *kvm,
 	unsigned max_pin;
 
 	switch (ue->type) {
-	case GVM_IRQ_ROUTING_IRQCHIP:
+	case AEHD_IRQ_ROUTING_IRQCHIP:
 		delta = 0;
 		switch (ue->u.irqchip.irqchip) {
-		case GVM_IRQCHIP_PIC_MASTER:
+		case AEHD_IRQCHIP_PIC_MASTER:
 			e->set = kvm_set_pic_irq;
 			max_pin = PIC_NUM_PINS;
 			break;
-		case GVM_IRQCHIP_PIC_SLAVE:
+		case AEHD_IRQCHIP_PIC_SLAVE:
 			e->set = kvm_set_pic_irq;
 			max_pin = PIC_NUM_PINS;
 			delta = 8;
 			break;
-		case GVM_IRQCHIP_IOAPIC:
-			max_pin = GVM_IOAPIC_NUM_PINS;
+		case AEHD_IRQCHIP_IOAPIC:
+			max_pin = AEHD_IOAPIC_NUM_PINS;
 			e->set = kvm_set_ioapic_irq;
 			break;
 		default:
@@ -293,7 +293,7 @@ int kvm_set_routing_entry(struct kvm *kvm,
 		if (e->irqchip.pin >= max_pin)
 			goto out;
 		break;
-	case GVM_IRQ_ROUTING_MSI:
+	case AEHD_IRQ_ROUTING_MSI:
 		e->set = kvm_set_msi;
 		e->msi.address_lo = ue->u.msi.address_lo;
 		e->msi.address_hi = ue->u.msi.address_hi;
@@ -338,12 +338,12 @@ bool kvm_intr_is_single_vcpu(struct kvm *kvm, struct kvm_lapic_irq *irq,
 }
 
 #define IOAPIC_ROUTING_ENTRY(irq) \
-	{ .gsi = irq, .type = GVM_IRQ_ROUTING_IRQCHIP,	\
-	  .u.irqchip = { .irqchip = GVM_IRQCHIP_IOAPIC, .pin = (irq) } }
+	{ .gsi = irq, .type = AEHD_IRQ_ROUTING_IRQCHIP,	\
+	  .u.irqchip = { .irqchip = AEHD_IRQCHIP_IOAPIC, .pin = (irq) } }
 #define ROUTING_ENTRY1(irq) IOAPIC_ROUTING_ENTRY(irq)
 
 #define PIC_ROUTING_ENTRY(irq) \
-	{ .gsi = irq, .type = GVM_IRQ_ROUTING_IRQCHIP,	\
+	{ .gsi = irq, .type = AEHD_IRQ_ROUTING_IRQCHIP,	\
 	  .u.irqchip = { .irqchip = SELECT_PIC(irq), .pin = (irq) % 8 } }
 #define ROUTING_ENTRY2(irq) \
 	IOAPIC_ROUTING_ENTRY(irq), PIC_ROUTING_ENTRY(irq)

@@ -14,7 +14,7 @@
 #pragma once
 #include <ntddk.h>
 #include <intrin.h>
-#include <gvm_types.h>
+#include <aehd_types.h>
 #include <string.h>
 #include <dos.h>
 #include <linux/list.h>
@@ -78,7 +78,7 @@ KeInsertQueueApc(
 	);
 
 // MSDN recommends the string in reverse order
-#define GVM_POOL_TAG '_MVG'
+#define AEHD_POOL_TAG '_MVG'
 
 // cpuid
 static __forceinline void cpuid(unsigned int op,
@@ -719,7 +719,7 @@ static __inline void *kmalloc(size_t size, size_t flags)
 	if (flags & __GFP_ZERO)
 		zero = 1;
 
-	ret = ExAllocatePoolWithTag(NonPagedPool, size, GVM_POOL_TAG);
+	ret = ExAllocatePoolWithTag(NonPagedPool, size, AEHD_POOL_TAG);
 
 	if(ret && zero)
 	{
@@ -737,19 +737,19 @@ static __inline void kfree(void* hva)
 {
 	if (!hva)
 		return;
-	ExFreePoolWithTag(hva, GVM_POOL_TAG);
+	ExFreePoolWithTag(hva, AEHD_POOL_TAG);
 }
 
 static __inline void *vmalloc(size_t size)
 {
-	return ExAllocatePoolWithTag(NonPagedPool, size, GVM_POOL_TAG);
+	return ExAllocatePoolWithTag(NonPagedPool, size, AEHD_POOL_TAG);
 }
 
 static __inline void vfree(void* hva)
 {
 	if (!hva)
 		return;
-	ExFreePoolWithTag(hva, GVM_POOL_TAG);
+	ExFreePoolWithTag(hva, AEHD_POOL_TAG);
 }
 
 static __inline void *vzalloc(size_t size)
@@ -776,7 +776,7 @@ static __inline void kfree_fast(void* hva)
 {
 	if (!hva)
 		return;
-	ExFreePoolWithTag(hva, GVM_POOL_TAG);
+	ExFreePoolWithTag(hva, AEHD_POOL_TAG);
 }
 
 #define kvfree kfree_fast
@@ -834,11 +834,11 @@ static __inline struct page *alloc_page(unsigned int gfp_mask)
 	int zero = 0;
 	struct page* page = ExAllocatePoolWithTag(NonPagedPool,
 						  sizeof(*page),
-						  GVM_POOL_TAG);
+						  AEHD_POOL_TAG);
 	if(!page)
 		goto out_error;
 
-	page_hva = ExAllocatePoolWithTag(NonPagedPool, PAGE_SIZE, GVM_POOL_TAG);
+	page_hva = ExAllocatePoolWithTag(NonPagedPool, PAGE_SIZE, AEHD_POOL_TAG);
 	if(!page_hva)
 		goto out_error_free;
 
@@ -862,7 +862,7 @@ static __inline struct page *alloc_page(unsigned int gfp_mask)
 	return page;
 
  out_error_free:
-	ExFreePoolWithTag(page, GVM_POOL_TAG);
+	ExFreePoolWithTag(page, AEHD_POOL_TAG);
  out_error:
 	return 0;
 }
@@ -873,8 +873,8 @@ static __inline void __free_pages(struct page* page, unsigned int order)
 	pglist[page->pfn] = 0;
 	raw_spin_unlock(&global_page_lock);
 
-	ExFreePoolWithTag(page->hva, GVM_POOL_TAG);
-	ExFreePoolWithTag(page, GVM_POOL_TAG);
+	ExFreePoolWithTag(page->hva, AEHD_POOL_TAG);
+	ExFreePoolWithTag(page, AEHD_POOL_TAG);
 }
 
 static __inline void free_pages(size_t addr, unsigned int order)
@@ -1197,15 +1197,15 @@ static __inline void free_cpumask_var(cpumask_var_t mask)
 #define MAP_ANONYMOUS   0x20            /* don't use a file */
 #define MAP_UNINITIALIZED 0x0           /* Don't support this flag */
 
-typedef struct gvm_mmap_node
+typedef struct aehd_mmap_node
 {
 	PMDL pMDL;
 	PVOID pMem;
 	PVOID UserVA;
 	struct list_head list;
-}gvm_mmap_node;
+}aehd_mmap_node;
 
-extern struct list_head gvm_mmap_list;
+extern struct list_head aehd_mmap_list;
 
 extern size_t vm_mmap(struct file *file, size_t addr,
 	size_t len, size_t prot, size_t flag, size_t offset);

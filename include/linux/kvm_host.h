@@ -16,11 +16,11 @@
 
 #include <asm/kvm_host.h>
 
-#include <gvm-main.h>
+#include <aehd_main.h>
 #include <ntkrutils.h>
 
-#ifndef GVM_MAX_VCPU_ID
-#define GVM_MAX_VCPU_ID GVM_MAX_VCPUS
+#ifndef AEHD_MAX_VCPU_ID
+#define AEHD_MAX_VCPU_ID AEHD_MAX_VCPUS
 #endif
 
 /*
@@ -28,14 +28,14 @@
  * in kvm, other bits are visible for userspace which are defined in
  * include/linux/kvm_h.
  */
-#define GVM_MEMSLOT_INVALID	(1ULL << 16)
-#define GVM_MEMSLOT_INCOHERENT	(1ULL << 17)
+#define AEHD_MEMSLOT_INVALID	(1ULL << 16)
+#define AEHD_MEMSLOT_INCOHERENT	(1ULL << 17)
 
 /* Two fragments for cross MMIO pages. */
-#define GVM_MAX_MMIO_FRAGMENTS	2
+#define AEHD_MAX_MMIO_FRAGMENTS	2
 
-#ifndef GVM_ADDRESS_SPACE_NUM
-#define GVM_ADDRESS_SPACE_NUM	1
+#ifndef AEHD_ADDRESS_SPACE_NUM
+#define AEHD_ADDRESS_SPACE_NUM	1
 #endif
 
 /*
@@ -43,13 +43,13 @@
  * so we can mask bit 62 ~ bit 52  to indicate the error pfn,
  * mask bit 63 to indicate the noslot pfn.
  */
-#define GVM_PFN_ERR_MASK	(0x7ffULL << 52)
-#define GVM_PFN_ERR_NOSLOT_MASK	(0xfffULL << 52)
-#define GVM_PFN_NOSLOT		(0x1ULL << 63)
+#define AEHD_PFN_ERR_MASK	(0x7ffULL << 52)
+#define AEHD_PFN_ERR_NOSLOT_MASK	(0xfffULL << 52)
+#define AEHD_PFN_NOSLOT		(0x1ULL << 63)
 
-#define GVM_PFN_ERR_FAULT	(GVM_PFN_ERR_MASK)
-#define GVM_PFN_ERR_HWPOISON	(GVM_PFN_ERR_MASK + 1)
-#define GVM_PFN_ERR_RO_FAULT	(GVM_PFN_ERR_MASK + 2)
+#define AEHD_PFN_ERR_FAULT	(AEHD_PFN_ERR_MASK)
+#define AEHD_PFN_ERR_HWPOISON	(AEHD_PFN_ERR_MASK + 1)
+#define AEHD_PFN_ERR_RO_FAULT	(AEHD_PFN_ERR_MASK + 2)
 
 /*
  * error pfns indicate that the gfn is in slot but faild to
@@ -57,7 +57,7 @@
  */
 static inline bool is_error_pfn(kvm_pfn_t pfn)
 {
-	return !!(pfn & GVM_PFN_ERR_MASK);
+	return !!(pfn & AEHD_PFN_ERR_MASK);
 }
 
 /*
@@ -67,13 +67,13 @@ static inline bool is_error_pfn(kvm_pfn_t pfn)
  */
 static inline bool is_error_noslot_pfn(kvm_pfn_t pfn)
 {
-	return !!(pfn & GVM_PFN_ERR_NOSLOT_MASK);
+	return !!(pfn & AEHD_PFN_ERR_NOSLOT_MASK);
 }
 
 /* noslot pfn indicates that the gfn is not in slot. */
 static inline bool is_noslot_pfn(kvm_pfn_t pfn)
 {
-	return pfn == GVM_PFN_NOSLOT;
+	return pfn == AEHD_PFN_NOSLOT;
 }
 
 /*
@@ -81,15 +81,15 @@ static inline bool is_noslot_pfn(kvm_pfn_t pfn)
  * that is least likely to be used. We grab two to server as our
  * bad hva.
  */
-#define GVM_HVA_ERR_BAD		(0x8000000000000000)
-#define GVM_HVA_ERR_RO_BAD	(GVM_HVA_ERR_BAD + PAGE_SIZE)
+#define AEHD_HVA_ERR_BAD		(0x8000000000000000)
+#define AEHD_HVA_ERR_RO_BAD	(AEHD_HVA_ERR_BAD + PAGE_SIZE)
 
 static inline bool kvm_is_error_hva(size_t addr)
 {
-	return addr == GVM_HVA_ERR_BAD || addr == GVM_HVA_ERR_RO_BAD;
+	return addr == AEHD_HVA_ERR_BAD || addr == AEHD_HVA_ERR_RO_BAD;
 }
 
-#define GVM_ERR_PTR_BAD_PAGE	(ERR_PTR(-ENOENT))
+#define AEHD_ERR_PTR_BAD_PAGE	(ERR_PTR(-ENOENT))
 
 static inline bool is_error_page(struct page *page)
 {
@@ -100,12 +100,12 @@ static inline bool is_error_page(struct page *page)
  * Architecture-independent vcpu->requests bit members
  * Bits 4-7 are reserved for more arch-independent bits.
  */
-#define GVM_REQ_TLB_FLUSH          0
-#define GVM_REQ_MMU_RELOAD         1
-#define GVM_REQ_PENDING_TIMER      2
-#define GVM_REQ_UNHALT             3
+#define AEHD_REQ_TLB_FLUSH          0
+#define AEHD_REQ_MMU_RELOAD         1
+#define AEHD_REQ_PENDING_TIMER      2
+#define AEHD_REQ_UNHALT             3
 
-#define GVM_USERSPACE_IRQ_SOURCE_ID		0
+#define AEHD_USERSPACE_IRQ_SOURCE_ID		0
 
 extern struct kmem_cache *kvm_vcpu_cache;
 
@@ -126,11 +126,11 @@ struct kvm_io_bus {
 };
 
 enum kvm_bus {
-	GVM_MMIO_BUS,
-	GVM_PIO_BUS,
-	GVM_VIRTIO_CCW_NOTIFY_BUS,
-	GVM_FAST_MMIO_BUS,
-	GVM_NR_BUSES
+	AEHD_MMIO_BUS,
+	AEHD_PIO_BUS,
+	AEHD_VIRTIO_CCW_NOTIFY_BUS,
+	AEHD_FAST_MMIO_BUS,
+	AEHD_NR_BUSES
 };
 
 int kvm_io_bus_write(struct kvm_vcpu *vcpu, enum kvm_bus bus_idx, gpa_t addr,
@@ -194,7 +194,7 @@ struct kvm_vcpu {
 	int mmio_is_write;
 	int mmio_cur_fragment;
 	int mmio_nr_fragments;
-	struct kvm_mmio_fragment mmio_fragments[GVM_MAX_MMIO_FRAGMENTS];
+	struct kvm_mmio_fragment mmio_fragments[AEHD_MAX_MMIO_FRAGMENTS];
 
 	bool preempted;
 	struct kvm_vcpu_arch arch;
@@ -209,7 +209,7 @@ static inline int kvm_vcpu_exiting_guest_mode(struct kvm_vcpu *vcpu)
  * Some of the bitops functions do not support too long bitmaps.
  * This number must be determined not to exceed such limits.
  */
-#define GVM_MEM_MAX_NR_PAGES ((1ULL << 31) - 1)
+#define AEHD_MEM_MAX_NR_PAGES ((1ULL << 31) - 1)
 
 struct pmem_lock {
 	/* Lock to prevent multiple fault in to the same pfn
@@ -262,7 +262,7 @@ struct kvm_kernel_irq_routing_entry {
 };
 
 struct kvm_irq_routing_table {
-	int chip[GVM_NR_IRQCHIPS][GVM_IRQCHIP_NUM_PINS];
+	int chip[AEHD_NR_IRQCHIPS][AEHD_IRQCHIP_NUM_PINS];
 	u32 nr_rt_entries;
 	/*
 	 * Array indexed by gsi. Each entry contains list of irq chips
@@ -271,15 +271,15 @@ struct kvm_irq_routing_table {
 	struct hlist_head map[0];
 };
 
-#ifndef GVM_PRIVATE_MEM_SLOTS
-#define GVM_PRIVATE_MEM_SLOTS 0
+#ifndef AEHD_PRIVATE_MEM_SLOTS
+#define AEHD_PRIVATE_MEM_SLOTS 0
 #endif
 
-#ifndef GVM_MEM_SLOTS_NUM
-#define GVM_MEM_SLOTS_NUM (GVM_USER_MEM_SLOTS + GVM_PRIVATE_MEM_SLOTS)
+#ifndef AEHD_MEM_SLOTS_NUM
+#define AEHD_MEM_SLOTS_NUM (AEHD_USER_MEM_SLOTS + AEHD_PRIVATE_MEM_SLOTS)
 #endif
 
-#ifndef __GVM_VCPU_MULTIPLE_ADDRESS_SPACE
+#ifndef __AEHD_VCPU_MULTIPLE_ADDRESS_SPACE
 static inline int kvm_arch_vcpu_memslots_id(struct kvm_vcpu *vcpu)
 {
 	return 0;
@@ -293,9 +293,9 @@ static inline int kvm_arch_vcpu_memslots_id(struct kvm_vcpu *vcpu)
  */
 struct kvm_memslots {
 	u64 generation;
-	struct kvm_memory_slot memslots[GVM_MEM_SLOTS_NUM];
+	struct kvm_memory_slot memslots[AEHD_MEM_SLOTS_NUM];
 	/* The mapping table from slot id to the index in memslots[]. */
-	short id_to_index[GVM_MEM_SLOTS_NUM];
+	short id_to_index[AEHD_MEM_SLOTS_NUM];
 	atomic_t lru_slot;
 	int used_slots;
 };
@@ -305,12 +305,12 @@ struct kvm {
 	struct mutex slots_lock;
 	PEPROCESS process;
 	u64 vm_id;
-	struct kvm_memslots *memslots[GVM_ADDRESS_SPACE_NUM];
-	struct kvm_vcpu *vcpus[GVM_MAX_VCPUS];
+	struct kvm_memslots *memslots[AEHD_ADDRESS_SPACE_NUM];
+	struct kvm_vcpu *vcpus[AEHD_MAX_VCPUS];
 
 	/*
 	 * created_vcpus is protected by kvm->lock, and is incremented
-	 * at the beginning of GVM_CREATE_VCPU.  online_vcpus is only
+	 * at the beginning of AEHD_CREATE_VCPU.  online_vcpus is only
 	 * incremented after storing the kvm_vcpu pointer in vcpus,
 	 * and is accessed atomically.
 	 */
@@ -319,7 +319,7 @@ struct kvm {
 	int last_boosted_vcpu;
 	struct list_head vm_list;
 	struct mutex lock;
-	struct kvm_io_bus *buses[GVM_NR_BUSES];
+	struct kvm_io_bus *buses[AEHD_NR_BUSES];
 	struct kvm_vm_stat stat;
 	struct kvm_arch arch;
 	atomic_t users_count;
@@ -378,7 +378,7 @@ static inline struct kvm_vcpu *kvm_get_vcpu_by_id(struct kvm *kvm, int id)
 
 	if (id < 0)
 		return NULL;
-	if (id < GVM_MAX_VCPUS)
+	if (id < AEHD_MAX_VCPUS)
 		vcpu = kvm_get_vcpu(kvm, id);
 	if (vcpu && vcpu->vcpu_id == id)
 		return vcpu;
@@ -390,7 +390,7 @@ static inline struct kvm_vcpu *kvm_get_vcpu_by_id(struct kvm *kvm, int id)
 
 #define kvm_for_each_memslot(memslot, slots)	\
 	for (memslot = &slots->memslots[0];	\
-	      memslot < slots->memslots + GVM_MEM_SLOTS_NUM && memslot->npages;\
+	      memslot < slots->memslots + AEHD_MEM_SLOTS_NUM && memslot->npages;\
 		memslot++)
 
 int kvm_vcpu_init(struct kvm_vcpu *vcpu, struct kvm *kvm, unsigned id);
@@ -440,7 +440,7 @@ id_to_memslot(struct kvm_memslots *slots, int id)
 }
 
 /*
- * GVM_SET_USER_MEMORY_REGION ioctl allows the following operations:
+ * AEHD_SET_USER_MEMORY_REGION ioctl allows the following operations:
  * - create a new memory slot
  * - delete an existing memory slot
  * - modify an existing memory slot
@@ -451,10 +451,10 @@ id_to_memslot(struct kvm_memslots *slots, int id)
  * differentiation is the best we can do for __kvm_set_memory_region():
  */
 enum kvm_mr_change {
-	GVM_MR_CREATE,
-	GVM_MR_DELETE,
-	GVM_MR_MOVE,
-	GVM_MR_FLAGS_ONLY,
+	AEHD_MR_CREATE,
+	AEHD_MR_DELETE,
+	AEHD_MR_MOVE,
+	AEHD_MR_FLAGS_ONLY,
 };
 
 int kvm_set_memory_region(struct kvm *kvm,
@@ -552,9 +552,9 @@ void kvm_flush_remote_tlbs(struct kvm *kvm);
 void kvm_reload_remote_mmus(struct kvm *kvm);
 bool kvm_make_all_cpus_request(struct kvm *kvm, unsigned int req);
 
-long kvm_arch_dev_ioctl(struct gvm_device_extension *devext, PIRP pIrp,
+long kvm_arch_dev_ioctl(struct aehd_device_extension *devext, PIRP pIrp,
 			unsigned int ioctl);
-long kvm_arch_vcpu_ioctl(struct gvm_device_extension *devext, PIRP pIrp,
+long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext, PIRP pIrp,
 			 unsigned int ioctl);
 
 int kvm_vm_ioctl_check_extension(struct kvm *kvm, long ext);
@@ -574,7 +574,7 @@ int kvm_vm_ioctl_get_dirty_log(struct kvm *kvm, struct kvm_dirty_log *log);
 
 int kvm_vm_ioctl_irq_line(struct kvm *kvm, struct kvm_irq_level *irq_level,
 			bool line_status);
-long kvm_arch_vm_ioctl(struct gvm_device_extension *devext, PIRP pIrp,
+long kvm_arch_vm_ioctl(struct aehd_device_extension *devext, PIRP pIrp,
 		       unsigned int ioctl);
 
 int kvm_arch_vcpu_ioctl_get_fpu(struct kvm_vcpu *vcpu, struct kvm_fpu *fpu);
@@ -623,7 +623,7 @@ int kvm_arch_vcpu_should_kick(struct kvm_vcpu *vcpu);
 
 void *kvm_kvzalloc(size_t size);
 
-#ifndef __GVM_HAVE_ARCH_VM_ALLOC
+#ifndef __AEHD_HAVE_ARCH_VM_ALLOC
 static inline struct kvm *kvm_arch_alloc_vm(void)
 {
 	return kzalloc(sizeof(struct kvm), GFP_KERNEL);
@@ -635,7 +635,7 @@ static inline void kvm_arch_free_vm(struct kvm *kvm)
 }
 #endif
 
-#ifdef __GVM_HAVE_ARCH_INTC_INITIALIZED
+#ifdef __AEHD_HAVE_ARCH_INTC_INITIALIZED
 /*
  * returns true if the virtual interrupt controller is initialized and
  * ready to accept virtual IRQ. On some architectures the virtual interrupt
@@ -754,7 +754,7 @@ static inline bool kvm_is_error_gpa(struct kvm *kvm, gpa_t gpa)
 	return kvm_is_error_hva(hva);
 }
 
-#if defined(CONFIG_MMU_NOTIFIER) && defined(GVM_ARCH_WANT_MMU_NOTIFIER)
+#if defined(CONFIG_MMU_NOTIFIER) && defined(AEHD_ARCH_WANT_MMU_NOTIFIER)
 static inline int mmu_notifier_retry(struct kvm *kvm, size_t mmu_seq)
 {
 	if (unlikely(kvm->mmu_notifier_count))
@@ -777,7 +777,7 @@ static inline int mmu_notifier_retry(struct kvm *kvm, size_t mmu_seq)
 #endif
 
 
-#define GVM_MAX_IRQ_ROUTES 1024
+#define AEHD_MAX_IRQ_ROUTES 1024
 
 int kvm_set_irq_routing(struct kvm *kvm,
 			const struct kvm_irq_routing_entry *entries,
@@ -818,7 +818,7 @@ static inline bool kvm_check_request(int req, struct kvm_vcpu *vcpu)
 
 extern bool kvm_rebooting;
 
-#ifdef CONFIG_HAVE_GVM_INVALID_WAKEUPS
+#ifdef CONFIG_HAVE_AEHD_INVALID_WAKEUPS
 /* If we wakeup during the poll time, was it a sucessful poll? */
 static inline bool vcpu_valid_wakeup(struct kvm_vcpu *vcpu)
 {
@@ -830,6 +830,6 @@ static inline bool vcpu_valid_wakeup(struct kvm_vcpu *vcpu)
 {
 	return true;
 }
-#endif /* CONFIG_HAVE_GVM_INVALID_WAKEUPS */
+#endif /* CONFIG_HAVE_AEHD_INVALID_WAKEUPS */
 
 #endif

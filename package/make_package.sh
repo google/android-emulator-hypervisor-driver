@@ -14,4 +14,4 @@
 
 #!/bin/bash
 cd ..
-zip -r package/gvm-`date +%Y%m%d-%H%M`.zip Release/ arch/ asmgen/ gvm* virt/ __asm.* ntkrutils.* include/ assembly/
+zip -r package/aehd-`date +%Y%m%d-%H%M`.zip Release/ arch/ asmgen/ aehd* virt/ __asm.* ntkrutils.* include/ assembly/

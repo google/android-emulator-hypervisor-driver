@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -25,7 +25,7 @@
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <Configuration>Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
-    <RootNamespace>gvm</RootNamespace>
+    <RootNamespace>aehd</RootNamespace>
     <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -147,7 +147,7 @@
     <ClCompile Include="..\arch\x86\kvm\svm.c" />
     <ClCompile Include="..\arch\x86\kvm\vmx.c" />
     <ClCompile Include="..\arch\x86\kvm\x86.c" />
-    <ClCompile Include="..\gvm-main.c" />
+    <ClCompile Include="..\aehd_main.c" />
     <ClCompile Include="..\ntkrutils.c" />
     <ClCompile Include="..\virt\kvm\irqchip.c" />
     <ClCompile Include="..\virt\kvm\kvm_main.c" />
@@ -173,8 +173,8 @@
     <ClInclude Include="..\arch\x86\kvm\pmu.h" />
     <ClInclude Include="..\arch\x86\kvm\tss.h" />
     <ClInclude Include="..\arch\x86\kvm\x86.h" />
-    <ClInclude Include="..\gvm-main.h" />
-    <ClInclude Include="..\gvm_types.h" />
+    <ClInclude Include="..\aehd_main.h" />
+    <ClInclude Include="..\aehd_types.h" />
     <ClInclude Include="..\include\kvm\iodev.h" />
     <ClInclude Include="..\include\linux\kvm_host.h" />
     <ClInclude Include="..\include\linux\kvm_types.h" />
@@ -191,7 +191,7 @@
     <MASM Include="..\assembly\x64\assembly.asm" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\gvm.rc" />
+    <ResourceCompile Include="..\aehd.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

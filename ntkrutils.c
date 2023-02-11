@@ -12,7 +12,7 @@
  */
 
 #include <ntddk.h>
-#include <gvm_types.h>
+#include <aehd_types.h>
 #include <ntkrutils.h>
 #include <linux/list.h>
 
@@ -69,7 +69,7 @@ PFNKEADDPROCESSORAFFINITYEX pKeAddProcessorAffinityEx;
 
 // Fix me: We assume there is not cpu online at this time
 
-NTSTATUS gvmGetCpuOnlineMap(void)
+NTSTATUS aehdGetCpuOnlineMap(void)
 {
 	NTSTATUS rc;
 	SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *inf = NULL;
@@ -86,7 +86,7 @@ NTSTATUS gvmGetCpuOnlineMap(void)
 			RelationGroup, NULL, &buffSize);
 	NT_ASSERT(rc == STATUS_INFO_LENGTH_MISMATCH);
 
-	inf = ExAllocatePoolWithTag(NonPagedPool, buffSize, GVM_POOL_TAG);
+	inf = ExAllocatePoolWithTag(NonPagedPool, buffSize, AEHD_POOL_TAG);
 
 	if (!inf)
 		return STATUS_INSUFFICIENT_RESOURCES;
@@ -122,7 +122,7 @@ NTSTATUS gvmGetCpuOnlineMap(void)
 	}
 
 mapout:
-	ExFreePoolWithTag(inf, GVM_POOL_TAG);
+	ExFreePoolWithTag(inf, AEHD_POOL_TAG);
 	return rc;
 }
 
@@ -177,8 +177,8 @@ int hrtimer_restart(struct hrtimer* timer)
 	return r;
 }
 
-struct list_head gvm_mmap_list;
-DEFINE_RAW_SPINLOCK(gvm_mmap_lock);
+struct list_head aehd_mmap_list;
+DEFINE_RAW_SPINLOCK(aehd_mmap_lock);
 
 size_t vm_mmap(struct file *notused, size_t addr, size_t len, size_t prot,
 	       size_t flag, size_t offset)
@@ -192,18 +192,18 @@ size_t __declspec(noinline) __vm_mmap(struct file *notused, size_t addr,
 	PMDL pMDL = NULL;
 	PVOID pMem = NULL;
 	PVOID UserVA = NULL;
-	struct gvm_mmap_node *node;
+	struct aehd_mmap_node *node;
 
 	node = ExAllocatePoolWithTag(NonPagedPool,
-				     sizeof(struct gvm_mmap_node),
-				     GVM_POOL_TAG);
+				     sizeof(struct aehd_mmap_node),
+				     AEHD_POOL_TAG);
 	if (!node)
 		return (size_t)NULL;
 
 	if (keva)
 		pMem = (PVOID)keva;
 	else {
-		pMem = ExAllocatePoolWithTag(NonPagedPool, len, GVM_POOL_TAG);
+		pMem = ExAllocatePoolWithTag(NonPagedPool, len, AEHD_POOL_TAG);
 		if (!pMem)
 			goto free_node;
 		RtlZeroMemory(pMem, len);
@@ -224,9 +224,9 @@ size_t __declspec(noinline) __vm_mmap(struct file *notused, size_t addr,
 	node->pMDL = pMDL;
 	node->pMem = pMem;
 
-	raw_spin_lock(&gvm_mmap_lock);
-	list_add_tail(&node->list, &gvm_mmap_list);
-	raw_spin_unlock(&gvm_mmap_lock);
+	raw_spin_lock(&aehd_mmap_lock);
+	list_add_tail(&node->list, &aehd_mmap_list);
+	raw_spin_unlock(&aehd_mmap_lock);
 
 	return (size_t)UserVA;
 
@@ -234,9 +234,9 @@ size_t __declspec(noinline) __vm_mmap(struct file *notused, size_t addr,
 	IoFreeMdl(pMDL);
  free_pmem:
 	if (keva)
-		ExFreePoolWithTag(pMem, GVM_POOL_TAG);
+		ExFreePoolWithTag(pMem, AEHD_POOL_TAG);
  free_node:
-	ExFreePoolWithTag(node, GVM_POOL_TAG);
+	ExFreePoolWithTag(node, AEHD_POOL_TAG);
 
 	return (size_t)NULL;
 }
@@ -248,12 +248,12 @@ int vm_munmap(size_t start, size_t len)
 
 int __declspec(noinline) __vm_munmap(size_t start, size_t len, bool freepage)
 {
-	struct gvm_mmap_node *node = NULL;
+	struct aehd_mmap_node *node = NULL;
 	int find = 0;
 
-	raw_spin_lock(&gvm_mmap_lock);
-#define LIST_ENTRY_TYPE_INFO struct gvm_mmap_node
-	list_for_each_entry(node, &gvm_mmap_list, list)
+	raw_spin_lock(&aehd_mmap_lock);
+#define LIST_ENTRY_TYPE_INFO struct aehd_mmap_node
+	list_for_each_entry(node, &aehd_mmap_list, list)
 		if (node->UserVA == (PVOID)start) {
 			find = 1;
 			break;
@@ -261,7 +261,7 @@ int __declspec(noinline) __vm_munmap(size_t start, size_t len, bool freepage)
 #undef LIST_ENTRY_TYPE_INFO
 	if (find)
 		list_del(&node->list);
-	raw_spin_unlock(&gvm_mmap_lock);
+	raw_spin_unlock(&aehd_mmap_lock);
 
 	if (!find)
 		return -1;
@@ -274,9 +274,9 @@ int __declspec(noinline) __vm_munmap(size_t start, size_t len, bool freepage)
 	IoFreeMdl(node->pMDL);
 
 	if (freepage)
-		ExFreePoolWithTag(node->pMem, GVM_POOL_TAG);
+		ExFreePoolWithTag(node->pMem, AEHD_POOL_TAG);
 
-	ExFreePoolWithTag(node, GVM_POOL_TAG);
+	ExFreePoolWithTag(node, AEHD_POOL_TAG);
 	return 0;
 }
 
@@ -474,7 +474,7 @@ static NTSTATUS get_physical_memsize(u64 *size)
 	    rc == STATUS_BUFFER_OVERFLOW))
 		goto key_close;
 
-	buff = ExAllocatePoolWithTag(NonPagedPool, buffSize, GVM_POOL_TAG);
+	buff = ExAllocatePoolWithTag(NonPagedPool, buffSize, AEHD_POOL_TAG);
 	if (!buff) {
 		rc = STATUS_NO_MEMORY;
 		goto key_close;
@@ -523,7 +523,7 @@ static NTSTATUS get_physical_memsize(u64 *size)
 	rc = STATUS_SUCCESS;
 
  free_buff:
-	ExFreePoolWithTag(buff, GVM_POOL_TAG);
+	ExFreePoolWithTag(buff, AEHD_POOL_TAG);
  key_close:
 	ZwClose(keyHandle);
 	return rc;
@@ -559,7 +559,7 @@ NTSTATUS NtKrUtilsInit(void)
 	if (!NT_SUCCESS(rc))
 		return rc;
 
-	rc = gvmGetCpuOnlineMap();
+	rc = aehdGetCpuOnlineMap();
 	if (!NT_SUCCESS(rc))
 		return rc;
 
@@ -587,13 +587,13 @@ NTSTATUS NtKrUtilsInit(void)
 
 	pglist = (struct page**)ExAllocatePoolWithTag(NonPagedPool,
 				max_pagen*sizeof(struct page *),
-				GVM_POOL_TAG);
+				AEHD_POOL_TAG);
 	if (!pglist)
 		return STATUS_NO_MEMORY;
 
 	RtlZeroMemory(pglist, max_pagen*sizeof(struct page *));
-	INIT_LIST_HEAD(&gvm_mmap_list);
-	spin_lock_init(&gvm_mmap_lock);
+	INIT_LIST_HEAD(&aehd_mmap_list);
+	spin_lock_init(&aehd_mmap_lock);
 
 	return STATUS_SUCCESS;
 }
@@ -605,8 +605,8 @@ void NtKrUtilsExit(void)
 	/* Well implemented code won't rely on freeing here */
 	for (i = 0; i < max_pagen; i++)
 		if (pglist[i])
-			ExFreePoolWithTag(pglist[i], GVM_POOL_TAG);
-	ExFreePoolWithTag(pglist, GVM_POOL_TAG);
+			ExFreePoolWithTag(pglist[i], AEHD_POOL_TAG);
+	ExFreePoolWithTag(pglist, AEHD_POOL_TAG);
 	pglist = NULL;
 }
 

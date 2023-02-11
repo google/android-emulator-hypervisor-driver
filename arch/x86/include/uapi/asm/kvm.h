@@ -10,7 +10,7 @@
  *
  */
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 #define DE_VECTOR 0
 #define DB_VECTOR 1
@@ -32,18 +32,18 @@
 #define VE_VECTOR 20
 
 /* Select x86 specific features in <linux/kvm.h> */
-#define __GVM_HAVE_MSI
-#define __GVM_HAVE_USER_NMI
-#define __GVM_HAVE_GUEST_DEBUG
-#define __GVM_HAVE_MSIX
-#define __GVM_HAVE_VCPU_EVENTS
-#define __GVM_HAVE_DEBUGREGS
-#define __GVM_HAVE_XSAVE
-#define __GVM_HAVE_XCRS
-#define __GVM_HAVE_READONLY_MEM
+#define __AEHD_HAVE_MSI
+#define __AEHD_HAVE_USER_NMI
+#define __AEHD_HAVE_GUEST_DEBUG
+#define __AEHD_HAVE_MSIX
+#define __AEHD_HAVE_VCPU_EVENTS
+#define __AEHD_HAVE_DEBUGREGS
+#define __AEHD_HAVE_XSAVE
+#define __AEHD_HAVE_XCRS
+#define __AEHD_HAVE_READONLY_MEM
 
 /* Architectural interrupt line count. */
-#define GVM_NR_INTERRUPTS 256
+#define AEHD_NR_INTERRUPTS 256
 
 struct kvm_memory_alias {
 	__u32 slot;  /* this has a different namespace than memory slots */
@@ -53,7 +53,7 @@ struct kvm_memory_alias {
 	__u64 target_phys_addr;
 };
 
-/* for GVM_GET_IRQCHIP and GVM_SET_IRQCHIP */
+/* for AEHD_GET_IRQCHIP and AEHD_SET_IRQCHIP */
 struct kvm_pic_state {
 	__u8 last_irr;	/* edge detection */
 	__u8 irr;		/* interrupt request register */
@@ -73,7 +73,7 @@ struct kvm_pic_state {
 	__u8 elcr_mask;
 };
 
-#define GVM_IOAPIC_NUM_PINS  24
+#define AEHD_IOAPIC_NUM_PINS  24
 struct kvm_ioapic_state {
 	__u64 base_address;
 	__u32 ioregsel;
@@ -95,19 +95,19 @@ struct kvm_ioapic_state {
 			__u8 reserved[4];
 			__u8 dest_id;
 		} fields;
-	} redirtbl[GVM_IOAPIC_NUM_PINS];
+	} redirtbl[AEHD_IOAPIC_NUM_PINS];
 };
 
-#define GVM_IRQCHIP_PIC_MASTER   0
-#define GVM_IRQCHIP_PIC_SLAVE    1
-#define GVM_IRQCHIP_IOAPIC       2
-#define GVM_NR_IRQCHIPS          3
+#define AEHD_IRQCHIP_PIC_MASTER   0
+#define AEHD_IRQCHIP_PIC_SLAVE    1
+#define AEHD_IRQCHIP_IOAPIC       2
+#define AEHD_NR_IRQCHIPS          3
 
-#define GVM_RUN_X86_SMM		 (1 << 0)
+#define AEHD_RUN_X86_SMM		 (1 << 0)
 
-/* for GVM_GET_REGS and GVM_SET_REGS */
+/* for AEHD_GET_REGS and AEHD_SET_REGS */
 struct kvm_regs {
-	/* out (GVM_GET_REGS) / in (GVM_SET_REGS) */
+	/* out (AEHD_GET_REGS) / in (AEHD_SET_REGS) */
 	__u64 rax, rbx, rcx, rdx;
 	__u64 rsi, rdi, rsp, rbp;
 	__u64 r8,  r9,  r10, r11;
@@ -115,10 +115,10 @@ struct kvm_regs {
 	__u64 rip, rflags;
 };
 
-/* for GVM_GET_LAPIC and GVM_SET_LAPIC */
-#define GVM_APIC_REG_SIZE 0x400
+/* for AEHD_GET_LAPIC and AEHD_SET_LAPIC */
+#define AEHD_APIC_REG_SIZE 0x400
 struct kvm_lapic_state {
-	char regs[GVM_APIC_REG_SIZE];
+	char regs[AEHD_APIC_REG_SIZE];
 };
 
 struct kvm_segment {
@@ -138,19 +138,19 @@ struct kvm_dtable {
 };
 
 
-/* for GVM_GET_SREGS and GVM_SET_SREGS */
+/* for AEHD_GET_SREGS and AEHD_SET_SREGS */
 struct kvm_sregs {
-	/* out (GVM_GET_SREGS) / in (GVM_SET_SREGS) */
+	/* out (AEHD_GET_SREGS) / in (AEHD_SET_SREGS) */
 	struct kvm_segment cs, ds, es, fs, gs, ss;
 	struct kvm_segment tr, ldt;
 	struct kvm_dtable gdt, idt;
 	__u64 cr0, cr2, cr3, cr4, cr8;
 	__u64 efer;
 	__u64 apic_base;
-	__u64 interrupt_bitmap[(GVM_NR_INTERRUPTS + 63) / 64];
+	__u64 interrupt_bitmap[(AEHD_NR_INTERRUPTS + 63) / 64];
 };
 
-/* for GVM_GET_FPU and GVM_SET_FPU */
+/* for AEHD_GET_FPU and AEHD_SET_FPU */
 struct kvm_fpu {
 	__u8  fpr[8][16];
 	__u16 fcw;
@@ -172,7 +172,7 @@ struct kvm_msr_entry {
 };
 
 #pragma warning(disable : 4200)
-/* for GVM_GET_MSRS and GVM_SET_MSRS */
+/* for AEHD_GET_MSRS and AEHD_SET_MSRS */
 struct kvm_msrs {
 	__u32 nmsrs; /* number of msrs in entries */
 	__u32 pad;
@@ -180,7 +180,7 @@ struct kvm_msrs {
 	struct kvm_msr_entry entries[0];
 };
 
-/* for GVM_GET_MSR_INDEX_LIST */
+/* for AEHD_GET_MSR_INDEX_LIST */
 struct kvm_msr_list {
 	__u32 nmsrs; /* number of msrs in entries */
 	__u32 indices[0];
@@ -197,18 +197,18 @@ struct kvm_cpuid_entry {
 	__u32 padding[3];
 };
 
-#define GVM_CPUID_FLAG_SIGNIFCANT_INDEX		(1 << 0)
-#define GVM_CPUID_FLAG_STATEFUL_FUNC		(1 << 1)
-#define GVM_CPUID_FLAG_STATE_READ_NEXT		(1 << 2)
+#define AEHD_CPUID_FLAG_SIGNIFCANT_INDEX		(1 << 0)
+#define AEHD_CPUID_FLAG_STATEFUL_FUNC		(1 << 1)
+#define AEHD_CPUID_FLAG_STATE_READ_NEXT		(1 << 2)
 
-/* for GVM_SET_CPUID */
+/* for AEHD_SET_CPUID */
 struct kvm_cpuid {
 	__u32 nent;
 	__u32 padding;
 	struct kvm_cpuid_entry entries[0];
 };
 
-/* for GVM_GET_PIT and GVM_SET_PIT */
+/* for AEHD_GET_PIT and AEHD_SET_PIT */
 struct kvm_pit_channel_state {
 	__u32 count; /* can be 65536 */
 	__u16 latched_count;
@@ -233,12 +233,12 @@ struct kvm_debug_exit_arch {
 	__u64 dr7;
 };
 
-#define GVM_GUESTDBG_USE_SW_BP		0x00010000
-#define GVM_GUESTDBG_USE_HW_BP		0x00020000
-#define GVM_GUESTDBG_INJECT_DB		0x00040000
-#define GVM_GUESTDBG_INJECT_BP		0x00080000
+#define AEHD_GUESTDBG_USE_SW_BP		0x00010000
+#define AEHD_GUESTDBG_USE_HW_BP		0x00020000
+#define AEHD_GUESTDBG_INJECT_DB		0x00040000
+#define AEHD_GUESTDBG_INJECT_BP		0x00080000
 
-/* for GVM_SET_GUEST_DEBUG */
+/* for AEHD_SET_GUEST_DEBUG */
 struct kvm_guest_debug_arch {
 	__u64 debugreg[8];
 };
@@ -248,17 +248,17 @@ struct kvm_reinject_control {
 	__u8 reserved[31];
 };
 
-/* When set in flags, include corresponding fields on GVM_SET_VCPU_EVENTS */
-#define GVM_VCPUEVENT_VALID_NMI_PENDING	0x00000001
-#define GVM_VCPUEVENT_VALID_SIPI_VECTOR	0x00000002
-#define GVM_VCPUEVENT_VALID_SHADOW	0x00000004
-#define GVM_VCPUEVENT_VALID_SMM		0x00000008
+/* When set in flags, include corresponding fields on AEHD_SET_VCPU_EVENTS */
+#define AEHD_VCPUEVENT_VALID_NMI_PENDING	0x00000001
+#define AEHD_VCPUEVENT_VALID_SIPI_VECTOR	0x00000002
+#define AEHD_VCPUEVENT_VALID_SHADOW	0x00000004
+#define AEHD_VCPUEVENT_VALID_SMM		0x00000008
 
 /* Interrupt shadow states */
-#define GVM_X86_SHADOW_INT_MOV_SS	0x01
-#define GVM_X86_SHADOW_INT_STI		0x02
+#define AEHD_X86_SHADOW_INT_MOV_SS	0x01
+#define AEHD_X86_SHADOW_INT_STI		0x02
 
-/* for GVM_GET/SET_VCPU_EVENTS */
+/* for AEHD_GET/SET_VCPU_EVENTS */
 struct kvm_vcpu_events {
 	struct {
 		__u8 injected;
@@ -290,7 +290,7 @@ struct kvm_vcpu_events {
 	__u32 reserved[9];
 };
 
-/* for GVM_GET/SET_DEBUGREGS */
+/* for AEHD_GET/SET_DEBUGREGS */
 struct kvm_debugregs {
 	__u64 db[4];
 	__u64 dr6;
@@ -299,12 +299,12 @@ struct kvm_debugregs {
 	__u64 reserved[9];
 };
 
-/* for GVM_CAP_XSAVE */
+/* for AEHD_CAP_XSAVE */
 struct kvm_xsave {
 	__u32 region[1024];
 };
 
-#define GVM_MAX_XCRS	16
+#define AEHD_MAX_XCRS	16
 
 struct kvm_xcr {
 	__u32 xcr;
@@ -315,7 +315,7 @@ struct kvm_xcr {
 struct kvm_xcrs {
 	__u32 nr_xcrs;
 	__u32 flags;
-	struct kvm_xcr xcrs[GVM_MAX_XCRS];
+	struct kvm_xcr xcrs[AEHD_MAX_XCRS];
 	__u64 padding[16];
 };
 
@@ -324,7 +324,7 @@ struct kvm_sync_regs {
 	u64 reg;
 };
 
-#define GVM_X86_QUIRK_LINT0_REENABLED	(1 << 0)
-#define GVM_X86_QUIRK_CD_NW_CLEARED	(1 << 1)
+#define AEHD_X86_QUIRK_LINT0_REENABLED	(1 << 0)
+#define AEHD_X86_QUIRK_CD_NW_CLEARED	(1 << 1)
 
 #endif /* _ASM_X86_KVM_H */

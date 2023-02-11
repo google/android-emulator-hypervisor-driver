@@ -6,7 +6,7 @@
 #define ARCH_X86_KVM_CPUID_H
 
 #include "x86.h"
-#include <gvm_types.h>
+#include <aehd_types.h>
 #include <asm/cpufeatures.h>
 #include <ntkrutils.h>
 

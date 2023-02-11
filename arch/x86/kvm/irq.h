@@ -31,7 +31,7 @@
 
 #define PIC_NUM_PINS 16
 #define SELECT_PIC(irq) \
-	((irq) < 8 ? GVM_IRQCHIP_PIC_MASTER : GVM_IRQCHIP_PIC_SLAVE)
+	((irq) < 8 ? AEHD_IRQCHIP_PIC_MASTER : AEHD_IRQCHIP_PIC_SLAVE)
 
 struct kvm;
 struct kvm_vcpu;

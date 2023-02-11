@@ -404,7 +404,7 @@ static u32 svm_get_interrupt_shadow(struct kvm_vcpu *vcpu)
 	u32 ret = 0;
 
 	if (svm->vmcb->control.int_state & SVM_INTERRUPT_SHADOW_MASK)
-		ret = GVM_X86_SHADOW_INT_STI | GVM_X86_SHADOW_INT_MOV_SS;
+		ret = AEHD_X86_SHADOW_INT_STI | AEHD_X86_SHADOW_INT_MOV_SS;
 	return ret;
 }
 
@@ -1606,7 +1606,7 @@ static void svm_set_cr0(struct kvm_vcpu *vcpu, size_t cr0)
 	 * does not do it - this results in some delay at
 	 * reboot
 	 */
-	if (kvm_check_has_quirk(vcpu->kvm, GVM_X86_QUIRK_CD_NW_CLEARED))
+	if (kvm_check_has_quirk(vcpu->kvm, AEHD_X86_QUIRK_CD_NW_CLEARED))
 		cr0 &= ~(X86_CR0_CD | X86_CR0_NW);
 	svm->vmcb->save.cr0 = cr0;
 	mark_dirty(svm->vmcb, VMCB_CR);
@@ -1673,8 +1673,8 @@ static void update_bp_intercept(struct kvm_vcpu *vcpu)
 
 	clr_exception_intercept(svm, BP_VECTOR);
 
-	if (vcpu->guest_debug & GVM_GUESTDBG_ENABLE) {
-		if (vcpu->guest_debug & GVM_GUESTDBG_USE_SW_BP)
+	if (vcpu->guest_debug & AEHD_GUESTDBG_ENABLE) {
+		if (vcpu->guest_debug & AEHD_GUESTDBG_USE_SW_BP)
 			set_exception_intercept(svm, BP_VECTOR);
 	} else
 		vcpu->guest_debug = 0;
@@ -1718,7 +1718,7 @@ static void svm_sync_dirty_debug_regs(struct kvm_vcpu *vcpu)
 	vcpu->arch.dr6 = svm_get_dr6(vcpu);
 	vcpu->arch.dr7 = svm->vmcb->save.dr7;
 
-	vcpu->arch.switch_db_regs &= ~GVM_DEBUGREG_WONT_EXIT;
+	vcpu->arch.switch_db_regs &= ~AEHD_DEBUGREG_WONT_EXIT;
 	set_dr_intercepts(svm);
 }
 
@@ -1752,7 +1752,7 @@ static int db_interception(struct vcpu_svm *svm)
 	struct kvm_run *kvm_run = svm->vcpu.run;
 
 	if (!(svm->vcpu.guest_debug &
-	      (GVM_GUESTDBG_SINGLESTEP | GVM_GUESTDBG_USE_HW_BP)) &&
+	      (AEHD_GUESTDBG_SINGLESTEP | AEHD_GUESTDBG_USE_HW_BP)) &&
 		!svm->nmi_singlestep) {
 		kvm_queue_exception(&svm->vcpu, DB_VECTOR);
 		return 1;
@@ -1760,14 +1760,14 @@ static int db_interception(struct vcpu_svm *svm)
 
 	if (svm->nmi_singlestep) {
 		svm->nmi_singlestep = false;
-		if (!(svm->vcpu.guest_debug & GVM_GUESTDBG_SINGLESTEP))
+		if (!(svm->vcpu.guest_debug & AEHD_GUESTDBG_SINGLESTEP))
 			svm->vmcb->save.rflags &=
 				~(X86_EFLAGS_TF | X86_EFLAGS_RF);
 	}
 
 	if (svm->vcpu.guest_debug &
-	    (GVM_GUESTDBG_SINGLESTEP | GVM_GUESTDBG_USE_HW_BP)) {
-		kvm_run->exit_reason = GVM_EXIT_DEBUG;
+	    (AEHD_GUESTDBG_SINGLESTEP | AEHD_GUESTDBG_USE_HW_BP)) {
+		kvm_run->exit_reason = AEHD_EXIT_DEBUG;
 		kvm_run->debug.arch.pc =
 			svm->vmcb->save.cs.base + svm->vmcb->save.rip;
 		kvm_run->debug.arch.exception = DB_VECTOR;
@@ -1781,7 +1781,7 @@ static int bp_interception(struct vcpu_svm *svm)
 {
 	struct kvm_run *kvm_run = svm->vcpu.run;
 
-	kvm_run->exit_reason = GVM_EXIT_DEBUG;
+	kvm_run->exit_reason = AEHD_EXIT_DEBUG;
 	kvm_run->debug.arch.pc = svm->vmcb->save.cs.base + svm->vmcb->save.rip;
 	kvm_run->debug.arch.exception = BP_VECTOR;
 	return 0;
@@ -1851,7 +1851,7 @@ static void svm_handle_mce(struct vcpu_svm *svm)
 		 */
 		pr_err("kvm: Guest triggered AMD Erratum 383\n");
 
-		kvm_make_request(GVM_REQ_TRIPLE_FAULT, &svm->vcpu);
+		kvm_make_request(AEHD_REQ_TRIPLE_FAULT, &svm->vcpu);
 
 		return;
 	}
@@ -1882,7 +1882,7 @@ static int shutdown_interception(struct vcpu_svm *svm)
 	clear_page(svm->vmcb);
 	init_vmcb(svm);
 
-	kvm_run->exit_reason = GVM_EXIT_SHUTDOWN;
+	kvm_run->exit_reason = AEHD_EXIT_SHUTDOWN;
 	return 0;
 }
 
@@ -2763,7 +2763,7 @@ static int stgi_interception(struct vcpu_svm *svm)
 
 	svm->next_rip = kvm_rip_read(&svm->vcpu) + 3;
 	skip_emulated_instruction(&svm->vcpu);
-	kvm_make_request(GVM_REQ_EVENT, &svm->vcpu);
+	kvm_make_request(AEHD_REQ_EVENT, &svm->vcpu);
 
 	enable_gif(svm);
 
@@ -2887,8 +2887,8 @@ static int task_switch_interception(struct vcpu_svm *svm)
 
 	if (kvm_task_switch(&svm->vcpu, tss_selector, int_vec, reason,
 				has_error_code, error_code) == EMULATE_FAIL) {
-		svm->vcpu.run->exit_reason = GVM_EXIT_INTERNAL_ERROR;
-		svm->vcpu.run->internal.suberror = GVM_INTERNAL_ERROR_EMULATION;
+		svm->vcpu.run->exit_reason = AEHD_EXIT_INTERNAL_ERROR;
+		svm->vcpu.run->internal.suberror = AEHD_INTERNAL_ERROR_EMULATION;
 		svm->vcpu.run->internal.ndata = 0;
 		return 0;
 	}
@@ -2908,7 +2908,7 @@ static int iret_interception(struct vcpu_svm *svm)
 	clr_intercept(svm, INTERCEPT_IRET);
 	svm->vcpu.arch.hflags |= HF_IRET_MASK;
 	svm->nmi_iret_rip = kvm_rip_read(&svm->vcpu);
-	kvm_make_request(GVM_REQ_EVENT, &svm->vcpu);
+	kvm_make_request(AEHD_REQ_EVENT, &svm->vcpu);
 	return 1;
 }
 
@@ -3053,7 +3053,7 @@ static int dr_interception(struct vcpu_svm *svm)
 		 * retrieve the full state of the debug registers.
 		 */
 		clr_dr_intercepts(svm);
-		svm->vcpu.arch.switch_db_regs |= GVM_DEBUGREG_WONT_EXIT;
+		svm->vcpu.arch.switch_db_regs |= AEHD_DEBUGREG_WONT_EXIT;
 		return 1;
 	}
 
@@ -3092,7 +3092,7 @@ static int cr8_write_interception(struct vcpu_svm *svm)
 		return r;
 	if (cr8_prev <= kvm_get_cr8(&svm->vcpu))
 		return r;
-	kvm_run->exit_reason = GVM_EXIT_SET_TPR;
+	kvm_run->exit_reason = AEHD_EXIT_SET_TPR;
 	return 0;
 }
 
@@ -3345,7 +3345,7 @@ static int msr_interception(struct vcpu_svm *svm)
 
 static int interrupt_window_interception(struct vcpu_svm *svm)
 {
-	kvm_make_request(GVM_REQ_EVENT, &svm->vcpu);
+	kvm_make_request(AEHD_REQ_EVENT, &svm->vcpu);
 	svm_clear_vintr(svm);
 	svm->vmcb->control.int_ctl &= ~V_IRQ_MASK;
 	mark_dirty(svm->vmcb, VMCB_INTR);
@@ -3413,9 +3413,9 @@ static int avic_incomplete_ipi_interception(struct vcpu_svm *svm)
 		 */
 		kvm_for_each_vcpu(i, vcpu, kvm) {
 			bool m = kvm_apic_match_dest(vcpu, apic,
-						     icrl & GVM_APIC_SHORT_MASK,
+						     icrl & AEHD_APIC_SHORT_MASK,
 						     GET_APIC_DEST_FIELD(icrh),
-						     icrl & GVM_APIC_DEST_MASK);
+						     icrl & AEHD_APIC_DEST_MASK);
 
 			if (m && !avic_vcpu_is_running(vcpu))
 				kvm_vcpu_wake_up(vcpu);
@@ -3846,7 +3846,7 @@ static int handle_exit(struct kvm_vcpu *vcpu)
 	svm_complete_interrupts(svm);
 
 	if (svm->vmcb->control.exit_code == SVM_EXIT_ERR) {
-		kvm_run->exit_reason = GVM_EXIT_FAIL_ENTRY;
+		kvm_run->exit_reason = AEHD_EXIT_FAIL_ENTRY;
 		kvm_run->fail_entry.hardware_entry_failure_reason
 			= svm->vmcb->control.exit_code;
 		pr_err("kvm: FAILED VMRUN WITH VMCB:\n");
@@ -4141,7 +4141,7 @@ static void svm_complete_interrupts(struct vcpu_svm *svm)
 	if ((svm->vcpu.arch.hflags & HF_IRET_MASK)
 	    && kvm_rip_read(&svm->vcpu) != svm->nmi_iret_rip) {
 		svm->vcpu.arch.hflags &= ~(HF_NMI_MASK | HF_IRET_MASK);
-		kvm_make_request(GVM_REQ_EVENT, &svm->vcpu);
+		kvm_make_request(AEHD_REQ_EVENT, &svm->vcpu);
 	}
 
 	svm->vcpu.arch.nmi_injected = false;
@@ -4151,7 +4151,7 @@ static void svm_complete_interrupts(struct vcpu_svm *svm)
 	if (!(exitintinfo & SVM_EXITINTINFO_VALID))
 		return;
 
-	kvm_make_request(GVM_REQ_EVENT, &svm->vcpu);
+	kvm_make_request(AEHD_REQ_EVENT, &svm->vcpu);
 
 	vector = exitintinfo & SVM_EXITINTINFO_VEC_MASK;
 	type = exitintinfo & SVM_EXITINTINFO_TYPE_MASK;

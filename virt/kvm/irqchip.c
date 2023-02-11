@@ -61,7 +61,7 @@ int kvm_send_userspace_msi(struct kvm *kvm, struct kvm_msi *msi)
 {
 	struct kvm_kernel_irq_routing_entry route;
 
-	if (!irqchip_in_kernel(kvm) || (msi->flags & ~GVM_MSI_VALID_DEVID))
+	if (!irqchip_in_kernel(kvm) || (msi->flags & ~AEHD_MSI_VALID_DEVID))
 		return -EINVAL;
 
 	route.msi.address_lo = msi->address_lo;
@@ -70,7 +70,7 @@ int kvm_send_userspace_msi(struct kvm *kvm, struct kvm_msi *msi)
 	route.msi.flags = msi->flags;
 	route.msi.devid = msi->devid;
 
-	return kvm_set_msi(&route, kvm, GVM_USERSPACE_IRQ_SOURCE_ID, 1, false);
+	return kvm_set_msi(&route, kvm, AEHD_USERSPACE_IRQ_SOURCE_ID, 1, false);
 }
 
 /*
@@ -82,7 +82,7 @@ int kvm_send_userspace_msi(struct kvm *kvm, struct kvm_msi *msi)
 int kvm_set_irq(struct kvm *kvm, int irq_source_id, u32 irq, int level,
 		bool line_status)
 {
-	struct kvm_kernel_irq_routing_entry irq_set[GVM_NR_IRQCHIPS];
+	struct kvm_kernel_irq_routing_entry irq_set[AEHD_NR_IRQCHIPS];
 	int ret = -1, i, idx;
 
 	/* Not possible to detect if the guest uses the PIC or the
@@ -151,8 +151,8 @@ static int setup_routing_entry(struct kvm *kvm,
 	 */
 #define LIST_ENTRY_TYPE_INFO struct kvm_kernel_irq_routing_entry
 	hlist_for_each_entry(ei, &rt->map[ue->gsi], link)
-		if (ei->type != GVM_IRQ_ROUTING_IRQCHIP ||
-		    ue->type != GVM_IRQ_ROUTING_IRQCHIP ||
+		if (ei->type != AEHD_IRQ_ROUTING_IRQCHIP ||
+		    ue->type != AEHD_IRQ_ROUTING_IRQCHIP ||
 		    ue->u.irqchip.irqchip == ei->irqchip.irqchip)
 			return r;
 #undef LIST_ENTRY_TYPE_INFO
@@ -162,7 +162,7 @@ static int setup_routing_entry(struct kvm *kvm,
 	r = kvm_set_routing_entry(kvm, e, ue);
 	if (r)
 		goto out;
-	if (e->type == GVM_IRQ_ROUTING_IRQCHIP)
+	if (e->type == AEHD_IRQ_ROUTING_IRQCHIP)
 		rt->chip[e->irqchip.irqchip][e->irqchip.pin] = e->gsi;
 
 	hlist_add_head(&e->link, &rt->map[e->gsi]);
@@ -187,7 +187,7 @@ int kvm_set_irq_routing(struct kvm *kvm,
 	int r;
 
 	for (i = 0; i < nr; ++i) {
-		if (ue[i].gsi >= GVM_MAX_IRQ_ROUTES)
+		if (ue[i].gsi >= AEHD_MAX_IRQ_ROUTES)
 			return -EINVAL;
 		nr_rt_entries = max(nr_rt_entries, ue[i].gsi);
 	}
@@ -201,8 +201,8 @@ int kvm_set_irq_routing(struct kvm *kvm,
 		return -ENOMEM;
 
 	new->nr_rt_entries = nr_rt_entries;
-	for (i = 0; i < GVM_NR_IRQCHIPS; i++)
-		for (j = 0; j < GVM_IRQCHIP_NUM_PINS; j++)
+	for (i = 0; i < AEHD_NR_IRQCHIPS; i++)
+		for (j = 0; j < AEHD_IRQCHIP_NUM_PINS; j++)
 			new->chip[i][j] = -1;
 
 	for (i = 0; i < nr; ++i) {
@@ -213,8 +213,8 @@ int kvm_set_irq_routing(struct kvm *kvm,
 
 		r = -EINVAL;
 		switch (ue->type) {
-		case GVM_IRQ_ROUTING_MSI:
-			if (ue->flags & ~GVM_MSI_VALID_DEVID)
+		case AEHD_IRQ_ROUTING_MSI:
+			if (ue->flags & ~AEHD_MSI_VALID_DEVID)
 				goto free_entry;
 			break;
 		default:

@@ -48,7 +48,7 @@ bool kvm_mpx_supported(void)
 
 u64 kvm_supported_xcr0(void)
 {
-	u64 xcr0 = GVM_SUPPORTED_XCR0 & host_xcr0;
+	u64 xcr0 = AEHD_SUPPORTED_XCR0 & host_xcr0;
 
 	if (!kvm_mpx_supported())
 		xcr0 &= ~(XFEATURE_MASK_BNDREGS | XFEATURE_MASK_BNDCSR);
@@ -171,7 +171,7 @@ int kvm_vcpu_ioctl_set_cpuid(struct kvm_vcpu *vcpu,
 	int r;
 
 	r = -E2BIG;
-	if (cpuid->nent > GVM_MAX_CPUID_ENTRIES)
+	if (cpuid->nent > AEHD_MAX_CPUID_ENTRIES)
 		goto out;
 	r = -EFAULT;
 	if (copy_from_user(&vcpu->arch.cpuid_entries, entries,
@@ -346,18 +346,18 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 	/* function 2 entries are STATEFUL. That is, repeated cpuid commands
 	 * may return different values. This forces us to get_cpu() before
 	 * issuing the first command, and also to emulate this annoying behavior
-	 * in kvm_emulate_cpuid() using GVM_CPUID_FLAG_STATE_READ_NEXT */
+	 * in kvm_emulate_cpuid() using AEHD_CPUID_FLAG_STATE_READ_NEXT */
 	case 2: {
 		int t, times = entry->eax & 0xff;
 
-		entry->flags |= GVM_CPUID_FLAG_STATEFUL_FUNC;
-		entry->flags |= GVM_CPUID_FLAG_STATE_READ_NEXT;
+		entry->flags |= AEHD_CPUID_FLAG_STATEFUL_FUNC;
+		entry->flags |= AEHD_CPUID_FLAG_STATE_READ_NEXT;
 		for (t = 1; t < times; ++t) {
 			if (*nent >= maxnent)
 				goto out;
 
 			do_cpuid_1_ent(&entry[t], function, 0);
-			entry[t].flags |= GVM_CPUID_FLAG_STATEFUL_FUNC;
+			entry[t].flags |= AEHD_CPUID_FLAG_STATEFUL_FUNC;
 			++*nent;
 		}
 		break;
@@ -366,7 +366,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 	case 4: {
 		int i, cache_type;
 
-		entry->flags |= GVM_CPUID_FLAG_SIGNIFCANT_INDEX;
+		entry->flags |= AEHD_CPUID_FLAG_SIGNIFCANT_INDEX;
 		/* read more entries until cache_type is zero */
 		for (i = 1; ; ++i) {
 			if (*nent >= maxnent)
@@ -377,7 +377,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 				break;
 			do_cpuid_1_ent(&entry[i], function, i);
 			entry[i].flags |=
-			       GVM_CPUID_FLAG_SIGNIFCANT_INDEX;
+			       AEHD_CPUID_FLAG_SIGNIFCANT_INDEX;
 			++*nent;
 		}
 		break;
@@ -389,7 +389,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 		entry->edx = 0;
 		break;
 	case 7: {
-		entry->flags |= GVM_CPUID_FLAG_SIGNIFCANT_INDEX;
+		entry->flags |= AEHD_CPUID_FLAG_SIGNIFCANT_INDEX;
 		/* Mask ebx against host capability word 9 */
 		if (index == 0) {
 			entry->ebx &= kvm_cpuid_7_0_ebx_x86_features;
@@ -446,7 +446,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 	case 0xb: {
 		int i, level_type;
 
-		entry->flags |= GVM_CPUID_FLAG_SIGNIFCANT_INDEX;
+		entry->flags |= AEHD_CPUID_FLAG_SIGNIFCANT_INDEX;
 		/* read more entries until level_type is zero */
 		for (i = 1; ; ++i) {
 			if (*nent >= maxnent)
@@ -457,7 +457,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 				break;
 			do_cpuid_1_ent(&entry[i], function, i);
 			entry[i].flags |=
-			       GVM_CPUID_FLAG_SIGNIFCANT_INDEX;
+			       AEHD_CPUID_FLAG_SIGNIFCANT_INDEX;
 			++*nent;
 		}
 		break;
@@ -470,7 +470,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 		entry->ebx = xstate_required_size(supported, false);
 		entry->ecx = entry->ebx;
 		entry->edx &= supported >> 32;
-		entry->flags |= GVM_CPUID_FLAG_SIGNIFCANT_INDEX;
+		entry->flags |= AEHD_CPUID_FLAG_SIGNIFCANT_INDEX;
 		if (!supported)
 			break;
 
@@ -497,7 +497,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 			entry[i].ecx = 0;
 			entry[i].edx = 0;
 			entry[i].flags |=
-			       GVM_CPUID_FLAG_SIGNIFCANT_INDEX;
+			       AEHD_CPUID_FLAG_SIGNIFCANT_INDEX;
 			++*nent;
 			++i;
 		}
@@ -571,7 +571,7 @@ out:
 static int do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 func,
 			u32 idx, int *nent, int maxnent, unsigned int type)
 {
-	if (type == GVM_GET_EMULATED_CPUID)
+	if (type == AEHD_GET_EMULATED_CPUID)
 		return __do_cpuid_ent_emulated(entry, func, idx, nent, maxnent);
 
 	return __do_cpuid_ent(entry, func, idx, nent, maxnent);
@@ -597,14 +597,14 @@ static bool sanity_check_entries(struct kvm_cpuid_entry __user *entries,
 	int i;
 	__u32 pad[3];
 
-	if (ioctl_type != GVM_GET_EMULATED_CPUID)
+	if (ioctl_type != AEHD_GET_EMULATED_CPUID)
 		return false;
 
 	/*
 	 * We want to make sure that ->padding is being passed clean from
 	 * userspace in case we want to use it for something in the future.
 	 *
-	 * Sadly, this wasn't enforced for GVM_GET_SUPPORTED_CPUID and so we
+	 * Sadly, this wasn't enforced for AEHD_GET_SUPPORTED_CPUID and so we
 	 * have to give ourselves satisfied only with the emulated side. /me
 	 * sheds a tear.
 	 */
@@ -633,8 +633,8 @@ int kvm_dev_ioctl_get_cpuid(PIRP pIrp, struct kvm_cpuid *cpuid,
 
 	if (cpuid->nent < 1)
 		goto out;
-	if (cpuid->nent > GVM_MAX_CPUID_ENTRIES)
-		cpuid->nent = GVM_MAX_CPUID_ENTRIES;
+	if (cpuid->nent > AEHD_MAX_CPUID_ENTRIES)
+		cpuid->nent = AEHD_MAX_CPUID_ENTRIES;
 
 	if (sanity_check_entries(entries, cpuid->nent, type))
 		return -EINVAL;
@@ -671,12 +671,12 @@ int kvm_dev_ioctl_get_cpuid(PIRP pIrp, struct kvm_cpuid *cpuid,
 
 	cpuid->nent = nent;
 
-	r = gvmUpdateReturnBuffer(pIrp, 0, cpuid, sizeof(cpuid));
+	r = aehdUpdateReturnBuffer(pIrp, 0, cpuid, sizeof(cpuid));
 	if (!NT_SUCCESS(r)) {
 		r = -EFAULT;
 		goto out_free;
 	}
-	r = gvmUpdateReturnBuffer(pIrp, sizeof(cpuid), cpuid_entries,
+	r = aehdUpdateReturnBuffer(pIrp, sizeof(cpuid), cpuid_entries,
 		       nent * sizeof(struct kvm_cpuid_entry));
 	if (!NT_SUCCESS(r)) {
 		r = -EFAULT;
@@ -695,12 +695,12 @@ static int move_to_next_stateful_cpuid_entry(struct kvm_vcpu *vcpu, int i)
 	struct kvm_cpuid_entry *e = &vcpu->arch.cpuid_entries[i];
 	int j, nent = vcpu->arch.cpuid_nent;
 
-	e->flags &= ~GVM_CPUID_FLAG_STATE_READ_NEXT;
+	e->flags &= ~AEHD_CPUID_FLAG_STATE_READ_NEXT;
 	/* when no next entry is found, the current entry[i] is reselected */
 	for (j = i + 1; ; j = (j + 1) % nent) {
 		struct kvm_cpuid_entry *ej = &vcpu->arch.cpuid_entries[j];
 		if (ej->function == e->function) {
-			ej->flags |= GVM_CPUID_FLAG_STATE_READ_NEXT;
+			ej->flags |= AEHD_CPUID_FLAG_STATE_READ_NEXT;
 			return j;
 		}
 	}
@@ -713,10 +713,10 @@ static int is_matching_cpuid_entry(struct kvm_cpuid_entry *e,
 {
 	if (e->function != function)
 		return 0;
-	if ((e->flags & GVM_CPUID_FLAG_SIGNIFCANT_INDEX) && e->index != index)
+	if ((e->flags & AEHD_CPUID_FLAG_SIGNIFCANT_INDEX) && e->index != index)
 		return 0;
-	if ((e->flags & GVM_CPUID_FLAG_STATEFUL_FUNC) &&
-	    !(e->flags & GVM_CPUID_FLAG_STATE_READ_NEXT))
+	if ((e->flags & AEHD_CPUID_FLAG_STATEFUL_FUNC) &&
+	    !(e->flags & AEHD_CPUID_FLAG_STATE_READ_NEXT))
 		return 0;
 	return 1;
 }
@@ -732,7 +732,7 @@ struct kvm_cpuid_entry *kvm_find_cpuid_entry(struct kvm_vcpu *vcpu,
 
 		e = &vcpu->arch.cpuid_entries[i];
 		if (is_matching_cpuid_entry(e, function, index)) {
-			if (e->flags & GVM_CPUID_FLAG_STATEFUL_FUNC)
+			if (e->flags & AEHD_CPUID_FLAG_STATEFUL_FUNC)
 				move_to_next_stateful_cpuid_entry(vcpu, i);
 			best = e;
 			break;

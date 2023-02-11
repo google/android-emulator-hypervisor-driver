@@ -48,7 +48,7 @@
 #define PT_PDPE_LEVEL 3
 #define PT_DIRECTORY_LEVEL 2
 #define PT_PAGE_TABLE_LEVEL 1
-#define PT_MAX_HUGEPAGE_LEVEL (PT_PAGE_TABLE_LEVEL + GVM_NR_PAGE_SIZES - 1)
+#define PT_MAX_HUGEPAGE_LEVEL (PT_PAGE_TABLE_LEVEL + AEHD_NR_PAGE_SIZES - 1)
 
 static inline u64 rsvd_bits(int s, int e)
 {
@@ -100,7 +100,7 @@ static inline int kvm_mmu_reload(struct kvm_vcpu *vcpu)
 /*
  * Currently, we have two sorts of write-protection, a) the first one
  * write-protects guest page to sync the guest modification, b) another one is
- * used to sync dirty bitmap when we do GVM_GET_DIRTY_LOG. The differences
+ * used to sync dirty bitmap when we do AEHD_GET_DIRTY_LOG. The differences
  * between these two sorts are:
  * 1) the first case clears SPTE_MMU_WRITEABLE bit.
  * 2) the first case requires flushing tlb immediately avoiding corrupting

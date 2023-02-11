@@ -8,7 +8,7 @@
 #ifndef _ASM_X86_FPU_H
 #define _ASM_X86_FPU_H
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 /*
  * The legacy x87 FPU state format, as saved by FSAVE and

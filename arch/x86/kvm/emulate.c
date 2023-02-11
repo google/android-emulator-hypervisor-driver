@@ -29,7 +29,7 @@
 #include "x86.h"
 #include "tss.h"
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 #include <uapi/asm/processor-flags.h>
 #include <asm/cpufeatures.h>
 
@@ -1960,7 +1960,7 @@ static int em_pop_sreg(struct x86_emulate_ctxt *ctxt)
 		return rc;
 
 	if (ctxt->modrm_reg == VCPU_SREG_SS)
-		ctxt->interruptibility = GVM_X86_SHADOW_INT_MOV_SS;
+		ctxt->interruptibility = AEHD_X86_SHADOW_INT_MOV_SS;
 	if (ctxt->op_bytes > 2)
 		rsp_increment(ctxt, ctxt->op_bytes - 2);
 
@@ -3679,7 +3679,7 @@ static int em_mov_sreg_rm(struct x86_emulate_ctxt *ctxt)
 		return emulate_ud(ctxt);
 
 	if (ctxt->modrm_reg == VCPU_SREG_SS)
-		ctxt->interruptibility = GVM_X86_SHADOW_INT_MOV_SS;
+		ctxt->interruptibility = AEHD_X86_SHADOW_INT_MOV_SS;
 
 	/* Disable writeback. */
 	ctxt->dst.type = OP_NONE;
@@ -3877,7 +3877,7 @@ static int em_sti(struct x86_emulate_ctxt *ctxt)
 	if (emulator_bad_iopl(ctxt))
 		return emulate_gp(ctxt, 0);
 
-	ctxt->interruptibility = GVM_X86_SHADOW_INT_STI;
+	ctxt->interruptibility = AEHD_X86_SHADOW_INT_STI;
 	ctxt->eflags |= X86_EFLAGS_IF;
 	return X86EMUL_CONTINUE;
 }

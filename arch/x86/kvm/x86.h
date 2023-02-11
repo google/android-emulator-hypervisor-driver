@@ -2,11 +2,11 @@
  * Copyright 2019 Google LLC
  */
 
-#ifndef ARCH_X86_GVM_X86_H
-#define ARCH_X86_GVM_X86_H
+#ifndef ARCH_X86_AEHD_X86_H
+#define ARCH_X86_AEHD_X86_H
 
 #include <linux/kvm_host.h>
-#include <gvm_types.h>
+#include <aehd_types.h>
 #include "kvm_cache_regs.h"
 #include <asm/msr-index.h>
 
@@ -183,7 +183,7 @@ bool kvm_mtrr_check_gfn_range_consistency(struct kvm_vcpu *vcpu, gfn_t gfn,
 					  int page_num);
 bool kvm_vector_hashing_enabled(void);
 
-#define GVM_SUPPORTED_XCR0     (XFEATURE_MASK_FP | XFEATURE_MASK_SSE \
+#define AEHD_SUPPORTED_XCR0     (XFEATURE_MASK_FP | XFEATURE_MASK_SSE \
 				| XFEATURE_MASK_YMM | XFEATURE_MASK_BNDREGS \
 				| XFEATURE_MASK_BNDCSR | XFEATURE_MASK_AVX512 \
 				| XFEATURE_MASK_PKRU)

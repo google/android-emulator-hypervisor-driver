@@ -828,7 +828,7 @@ static bool mmu_gfn_lpage_is_disallowed(struct kvm_vcpu *vcpu, gfn_t gfn,
 static inline bool memslot_valid_for_gpte(struct kvm_memory_slot *slot,
 					  bool no_dirty_log)
 {
-	if (!slot || slot->flags & GVM_MEMSLOT_INVALID)
+	if (!slot || slot->flags & AEHD_MEMSLOT_INVALID)
 		return false;
 	if (no_dirty_log && slot->dirty_bitmap)
 		return false;
@@ -1447,7 +1447,7 @@ static int kvm_handle_hva_range(struct kvm *kvm,
 	int ret = 0;
 	int i;
 
-	for (i = 0; i < GVM_ADDRESS_SPACE_NUM; i++) {
+	for (i = 0; i < AEHD_ADDRESS_SPACE_NUM; i++) {
 		slots = __kvm_memslots(kvm, i);
 		kvm_for_each_memslot(memslot, slots) {
 			size_t hva_start, hva_end;
@@ -1638,7 +1638,7 @@ static void kvm_mmu_free_page(struct kvm_mmu_page *sp)
 
 static unsigned kvm_page_table_hashfn(gfn_t gfn)
 {
-	return gfn & ((1 << GVM_MMU_HASH_SHIFT) - 1);
+	return gfn & ((1 << AEHD_MMU_HASH_SHIFT) - 1);
 }
 
 static void mmu_page_add_parent_pte(struct kvm_vcpu *vcpu,
@@ -1725,13 +1725,13 @@ static void nonpaging_update_pte(struct kvm_vcpu *vcpu,
 	WARN_ON(1);
 }
 
-#define GVM_PAGE_ARRAY_NR 16
+#define AEHD_PAGE_ARRAY_NR 16
 
 struct kvm_mmu_pages {
 	struct mmu_page_and_offset {
 		struct kvm_mmu_page *sp;
 		unsigned int idx;
-	} page[GVM_PAGE_ARRAY_NR];
+	} page[AEHD_PAGE_ARRAY_NR];
 	unsigned int nr;
 };
 
@@ -1748,7 +1748,7 @@ static int mmu_pages_add(struct kvm_mmu_pages *pvec, struct kvm_mmu_page *sp,
 	pvec->page[pvec->nr].sp = sp;
 	pvec->page[pvec->nr].idx = idx;
 	pvec->nr++;
-	return (pvec->nr == GVM_PAGE_ARRAY_NR);
+	return (pvec->nr == AEHD_PAGE_ARRAY_NR);
 }
 
 static inline void clear_unsync_child_bit(struct kvm_mmu_page *sp, int idx)
@@ -1869,10 +1869,10 @@ static void kvm_mmu_flush_or_zap(struct kvm_vcpu *vcpu,
 	if (remote_flush)
 		kvm_flush_remote_tlbs(vcpu->kvm);
 	else if (local_flush)
-		kvm_make_request(GVM_REQ_TLB_FLUSH, vcpu);
+		kvm_make_request(AEHD_REQ_TLB_FLUSH, vcpu);
 }
 
-#ifdef CONFIG_GVM_MMU_AUDIT
+#ifdef CONFIG_AEHD_MMU_AUDIT
 #include "mmu_audit.c"
 #else
 static void kvm_mmu_audit(struct kvm_vcpu *vcpu, int point) { }
@@ -2081,11 +2081,11 @@ static struct kvm_mmu_page *kvm_mmu_get_page(struct kvm_vcpu *vcpu,
 				break;
 
 			WARN_ON(!list_empty(&invalid_list));
-			kvm_make_request(GVM_REQ_TLB_FLUSH, vcpu);
+			kvm_make_request(AEHD_REQ_TLB_FLUSH, vcpu);
 		}
 
 		if (sp->unsync_children)
-			kvm_make_request(GVM_REQ_MMU_SYNC, vcpu);
+			kvm_make_request(AEHD_REQ_MMU_SYNC, vcpu);
 
 		__clear_sp_write_flooding_count(sp);
 		return sp;
@@ -2417,7 +2417,7 @@ static bool mmu_need_write_protect(struct kvm_vcpu *vcpu, gfn_t gfn,
 	struct kvm_mmu_page *sp;
 
 #if 0
-	if (kvm_page_track_is_active(vcpu, gfn, GVM_PAGE_TRACK_WRITE))
+	if (kvm_page_track_is_active(vcpu, gfn, AEHD_PAGE_TRACK_WRITE))
 		return true;
 #endif
 
@@ -2566,7 +2566,7 @@ static bool mmu_set_spte(struct kvm_vcpu *vcpu, u64 *sptep, unsigned pte_access,
 	      true, host_writable)) {
 		if (write_fault)
 			emulate = true;
-		kvm_make_request(GVM_REQ_TLB_FLUSH, vcpu);
+		kvm_make_request(AEHD_REQ_TLB_FLUSH, vcpu);
 	}
 
 	if (unlikely(is_mmio_spte(*sptep)))
@@ -2598,7 +2598,7 @@ static kvm_pfn_t pte_prefetch_gfn_to_pfn(struct kvm_vcpu *vcpu, gfn_t gfn,
 
 	slot = gfn_to_memslot_dirty_bitmap(vcpu, gfn, no_dirty_log);
 	if (!slot)
-		return GVM_PFN_ERR_FAULT;
+		return AEHD_PFN_ERR_FAULT;
 
 	return gfn_to_pfn_memslot_atomic(slot, gfn);
 }
@@ -2716,7 +2716,7 @@ static int kvm_handle_bad_page(struct kvm_vcpu *vcpu, gfn_t gfn, kvm_pfn_t pfn)
 	 * caused mmio page fault and treat it as mmio access.
 	 * Return 1 to tell kvm to emulate it.
 	 */
-	if (pfn == GVM_PFN_ERR_RO_FAULT)
+	if (pfn == AEHD_PFN_ERR_RO_FAULT)
 		return 1;
 
 	return -EFAULT;
@@ -2956,7 +2956,7 @@ static int mmu_check_root(struct kvm_vcpu *vcpu, gfn_t root_gfn)
 	int ret = 0;
 
 	if (!kvm_is_visible_gfn(vcpu->kvm, root_gfn)) {
-		kvm_make_request(GVM_REQ_TRIPLE_FAULT, vcpu);
+		kvm_make_request(AEHD_REQ_TRIPLE_FAULT, vcpu);
 		ret = 1;
 	}
 
@@ -3276,7 +3276,7 @@ static bool page_fault_handle_page_track(struct kvm_vcpu *vcpu,
 	 * guest is writing the page which is write tracked which can
 	 * not be fixed by page fault handler.
 	 */
-	if (kvm_page_track_is_active(vcpu, gfn, GVM_PAGE_TRACK_WRITE))
+	if (kvm_page_track_is_active(vcpu, gfn, AEHD_PAGE_TRACK_WRITE))
 		return true;
 #endif
 
@@ -4192,10 +4192,10 @@ static void make_mmu_pages_available(struct kvm_vcpu *vcpu)
 {
 	LIST_HEAD(invalid_list);
 
-	if (likely(kvm_mmu_available_pages(vcpu->kvm) >= GVM_MIN_FREE_MMU_PAGES))
+	if (likely(kvm_mmu_available_pages(vcpu->kvm) >= AEHD_MIN_FREE_MMU_PAGES))
 		return;
 
-	while (kvm_mmu_available_pages(vcpu->kvm) < GVM_REFILL_PAGES) {
+	while (kvm_mmu_available_pages(vcpu->kvm) < AEHD_REFILL_PAGES) {
 		if (!prepare_zap_oldest_mmu_page(vcpu->kvm, &invalid_list))
 			break;
 
@@ -4250,7 +4250,7 @@ emulate:
 void kvm_mmu_invlpg(struct kvm_vcpu *vcpu, gva_t gva)
 {
 	vcpu->arch.mmu.invlpg(vcpu, gva);
-	kvm_make_request(GVM_REQ_TLB_FLUSH, vcpu);
+	kvm_make_request(AEHD_REQ_TLB_FLUSH, vcpu);
 	++vcpu->stat.invlpg;
 }
 
@@ -4396,7 +4396,7 @@ void kvm_zap_gfn_range(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end)
 	int i;
 
 	spin_lock(&kvm->mmu_lock);
-	for (i = 0; i < GVM_ADDRESS_SPACE_NUM; i++) {
+	for (i = 0; i < AEHD_ADDRESS_SPACE_NUM; i++) {
 		slots = __kvm_memslots(kvm, i);
 		kvm_for_each_memslot(memslot, slots) {
 			gfn_t start, end;
@@ -4728,16 +4728,16 @@ unsigned int kvm_mmu_calculate_mmu_pages(struct kvm *kvm)
 	struct kvm_memory_slot *memslot;
 	int i;
 
-	for (i = 0; i < GVM_ADDRESS_SPACE_NUM; i++) {
+	for (i = 0; i < AEHD_ADDRESS_SPACE_NUM; i++) {
 		slots = __kvm_memslots(kvm, i);
 
 		kvm_for_each_memslot(memslot, slots)
 			nr_pages += memslot->npages;
 	}
 
-	nr_mmu_pages = nr_pages * GVM_PERMILLE_MMU_PAGES / 1000;
+	nr_mmu_pages = nr_pages * AEHD_PERMILLE_MMU_PAGES / 1000;
 	nr_mmu_pages = max(nr_mmu_pages,
-			   (unsigned int) GVM_MIN_ALLOC_MMU_PAGES);
+			   (unsigned int) AEHD_MIN_ALLOC_MMU_PAGES);
 
 	return nr_mmu_pages;
 }

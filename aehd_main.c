@@ -12,7 +12,7 @@
  */
 
 #include <ntddk.h>
-#include <gvm-main.h>
+#include <aehd_main.h>
 #include <ntkrutils.h>
 #include <linux/kvm_host.h>
 
@@ -21,8 +21,10 @@
 struct cpuinfo_x86 boot_cpu_data;
 
 /* Device Name */
-#define GVM_DEVICE_NAME L"\\Device\\gvm"
-#define GVM_DOS_DEVICE_NAME L"\\DosDevices\\gvm"
+#define AEHD_DEVICE_NAME L"\\Device\\AEHD"
+#define AEHD_DOS_DEVICE_NAME L"\\DosDevices\\AEHD"
+/* Keep the old name in order not to break existing android emulators */
+#define AEHD_DOS_DEVICE_NAME_OLD L"\\DosDevices\\gvm"
 #define POWER_CALL_BACK_NAME L"\\Callback\\PowerState"
 
 static PCALLBACK_OBJECT power_callback;
@@ -44,7 +46,7 @@ extern void svm_exit(void);
 extern int kvm_suspend(void);
 extern void kvm_resume(void);
 
-int gvmUpdateReturnBuffer(PIRP pIrp, u32 start, void *src, u32 size)
+int aehdUpdateReturnBuffer(PIRP pIrp, u32 start, void *src, u32 size)
 {
 	PIO_STACK_LOCATION pIoStack = IoGetCurrentIrpStackLocation(pIrp);
 	unsigned char *pBuff = pIrp->AssociatedIrp.SystemBuffer;
@@ -58,7 +60,7 @@ int gvmUpdateReturnBuffer(PIRP pIrp, u32 start, void *src, u32 size)
 	return 0;
 }
 
-VOID NTAPI gvmWaitSuspend(
+VOID NTAPI aehdWaitSuspend(
 	_In_ PKAPC Apc,
 	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,
 	_Inout_ PVOID* NormalContext,
@@ -78,7 +80,7 @@ VOID NTAPI gvmWaitSuspend(
 	atomic_dec(&suspend_wait);
 }
 
-VOID gvmDriverUnload(PDRIVER_OBJECT pDrvObj)
+VOID aehdDriverUnload(PDRIVER_OBJECT pDrvObj)
 {
 	//XXX: Clean up other devices?
 	PDEVICE_OBJECT pDevObj = pDrvObj->DeviceObject;
@@ -90,7 +92,9 @@ VOID gvmDriverUnload(PDRIVER_OBJECT pDrvObj)
 	if (power_callback)
 		ObDereferenceObject(power_callback);
 
-	RtlInitUnicodeString(&DosDeviceName, GVM_DOS_DEVICE_NAME);
+	RtlInitUnicodeString(&DosDeviceName, AEHD_DOS_DEVICE_NAME);
+	IoDeleteSymbolicLink(&DosDeviceName);
+	RtlInitUnicodeString(&DosDeviceName, AEHD_DOS_DEVICE_NAME_OLD);
 	IoDeleteSymbolicLink(&DosDeviceName);
 	IoDeleteDevice(pDevObj);
 
@@ -104,35 +108,35 @@ VOID gvmDriverUnload(PDRIVER_OBJECT pDrvObj)
 	else if (strcmp("AuthenticAMD", CPUString) == 0)
 		svm_exit();
 
-	ExFreePoolWithTag(pZeroPage, GVM_POOL_TAG);
+	ExFreePoolWithTag(pZeroPage, AEHD_POOL_TAG);
 	NtKrUtilsExit();
 }
 
 NTSTATUS kvm_vcpu_release(PDEVICE_OBJECT pDevObj, PIRP pIrp);
 NTSTATUS kvm_vm_release(PDEVICE_OBJECT pDevObj, PIRP pIrp);
-NTSTATUS gvmDeviceClose(PDEVICE_OBJECT pDevObj, PIRP pIrp)
+NTSTATUS aehdDeviceClose(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 {
 	NTSTATUS rc = STATUS_INVALID_PARAMETER;
-	struct gvm_device_extension *pDevExt;
+	struct aehd_device_extension *pDevExt;
 
-	DbgPrint("GVM device close\n");
+	DbgPrint("AEHD device close\n");
 
 	pDevExt = pDevObj->DeviceExtension;
 	switch (pDevExt->DevType) {
-	case GVM_DEVICE_TOP:
+	case AEHD_DEVICE_TOP:
 		rc = STATUS_SUCCESS;
 		break;
-	case GVM_DEVICE_VM:
+	case AEHD_DEVICE_VM:
 		rc = kvm_vm_release(pDevObj, pIrp);
 		break;
-	case GVM_DEVICE_VCPU:
+	case AEHD_DEVICE_VCPU:
 		rc = kvm_vcpu_release(pDevObj, pIrp);
 		break;
 	default:
-		DbgPrint("gvm Device Close with incorrect device type!\n");
+		DbgPrint("AEHD Device Close with incorrect device type!\n");
 	}
 
-	if (pDevExt->DevType != GVM_DEVICE_TOP)
+	if (pDevExt->DevType != AEHD_DEVICE_TOP)
 		IoDeleteDevice(pDevObj);
 
 	// Completing the device control
@@ -143,9 +147,9 @@ NTSTATUS gvmDeviceClose(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 	return rc;
 }
 
-NTSTATUS gvmDeviceCreate(PDEVICE_OBJECT pDevObj, PIRP pIrp)
+NTSTATUS aehdDeviceCreate(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 {
-	DbgPrint("GVM device open\n");
+	DbgPrint("AEHD device open\n");
 	UNREFERENCED_PARAMETER(pDevObj);
 
 	pIrp->IoStatus.Status = STATUS_SUCCESS;
@@ -155,7 +159,7 @@ NTSTATUS gvmDeviceCreate(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS gvmCreateVMDevice(PHANDLE pHandle,
+NTSTATUS aehdCreateVMDevice(PHANDLE pHandle,
 			   UINT32 vmNumber, INT32 vcpuNumber, PVOID PrivData)
 {
 	UNICODE_STRING deviceName;
@@ -165,23 +169,23 @@ NTSTATUS gvmCreateVMDevice(PHANDLE pHandle,
 	NTSTATUS rc;
 	HANDLE handle;
 	IO_STATUS_BLOCK ioStatBlock;
-	struct gvm_device_extension *pDevExt;
+	struct aehd_device_extension *pDevExt;
 
 	RtlInitEmptyUnicodeString(&deviceName, wDeviceName, 64);
 
 	if (vcpuNumber == -1)
 		RtlUnicodeStringPrintf(&deviceName,
-				       L"\\Device\\gvm_vm%d", vmNumber);
+				       L"\\Device\\AEHD_vm%d", vmNumber);
 	else if(vcpuNumber >= 0 && vcpuNumber <= 128 )
 		RtlUnicodeStringPrintf(&deviceName,
-				       L"\\Device\\gvm_vm%d_vcpu%d",
+				       L"\\Device\\AEHD_vm%d_vcpu%d",
 				       vmNumber,
 				       vcpuNumber);
 
 	rc = IoCreateDevice(gpDrvObj,
-		            sizeof(struct gvm_device_extension),
+		            sizeof(struct aehd_device_extension),
 			    &deviceName,
-			    FILE_DEVICE_GVM,
+			    FILE_DEVICE_AEHD,
 			    FILE_DEVICE_SECURE_OPEN,
 			    FALSE,
 			    &pDevObj);
@@ -190,9 +194,9 @@ NTSTATUS gvmCreateVMDevice(PHANDLE pHandle,
 
 	pDevExt = pDevObj->DeviceExtension;
 	if (vcpuNumber == -1)
-		pDevExt->DevType = GVM_DEVICE_VM;
+		pDevExt->DevType = AEHD_DEVICE_VM;
 	else
-		pDevExt->DevType = GVM_DEVICE_VCPU;
+		pDevExt->DevType = AEHD_DEVICE_VCPU;
 	pDevExt->PrivData = PrivData;
 
 	ClearFlag(pDevObj->Flags, DO_DEVICE_INITIALIZING);
@@ -215,7 +219,7 @@ NTSTATUS gvmCreateVMDevice(PHANDLE pHandle,
 	return rc;
 }
 
-NTSTATUS gvmDeleteVMDevice(PDEVICE_OBJECT pDevObj,
+NTSTATUS aehdDeleteVMDevice(PDEVICE_OBJECT pDevObj,
 			   UINT32 vmNumber, INT32 vcpuNumber)
 {
 	UNICODE_STRING deviceName;
@@ -232,10 +236,10 @@ NTSTATUS gvmDeleteVMDevice(PDEVICE_OBJECT pDevObj,
 
 	if (vcpuNumber == -1)
 		RtlUnicodeStringPrintf(&deviceName,
-				       L"\\Device\\gvm_vm%d", vmNumber);
+				       L"\\Device\\AEHD_vm%d", vmNumber);
 	else if (vcpuNumber >= 0 && vcpuNumber <= 128)
 		RtlUnicodeStringPrintf(&deviceName,
-				       L"\\Device\\gvm_vm%d_vcpu%d",
+				       L"\\Device\\AEHD_vm%d_vcpu%d",
 				       vmNumber,
 				       vcpuNumber);
 
@@ -252,7 +256,7 @@ out:
 	return rc;
 }
 
-static NTSTATUS gvmTranslateErrorcode(int r)
+static NTSTATUS aehdTranslateErrorcode(int r)
 {
 	switch (r) {
 	case -EINVAL:
@@ -270,7 +274,7 @@ static NTSTATUS gvmTranslateErrorcode(int r)
 	return r;
 }
 
-BOOLEAN gvmFastIoDeviceControl(
+BOOLEAN aehdFastIoDeviceControl(
 		PFILE_OBJECT notused1,
 		BOOLEAN notused2,
 		PVOID notused3,
@@ -281,30 +285,30 @@ BOOLEAN gvmFastIoDeviceControl(
 		PIO_STATUS_BLOCK pIoStatus,
 		PDEVICE_OBJECT pDevObj)
 {
-	struct gvm_device_extension *pDevExt;
+	struct aehd_device_extension *pDevExt;
 	NTSTATUS rc = STATUS_INVALID_PARAMETER;
 
 	/* Fast IO Device Control is only for run call */
-	if (ioctl != GVM_RUN)
+	if (ioctl != AEHD_RUN)
 		return FALSE;
 
 	pDevExt = pDevObj->DeviceExtension;
-	if (pDevExt->DevType != GVM_DEVICE_VCPU)
+	if (pDevExt->DevType != AEHD_DEVICE_VCPU)
 		return FALSE;
 
 	rc = kvm_vcpu_fast_ioctl_run(pDevObj);
 
-	pIoStatus->Status = gvmTranslateErrorcode(rc);
+	pIoStatus->Status = aehdTranslateErrorcode(rc);
 	return TRUE;
 }
 
-NTSTATUS gvmDeviceControl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
+NTSTATUS aehdDeviceControl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 {
 	NTSTATUS rc = STATUS_INVALID_PARAMETER;
 	PIO_STACK_LOCATION pIoStackLocation;
 	ULONG ioctl;
 	size_t arg;
-	struct gvm_device_extension *pDevExt;
+	struct aehd_device_extension *pDevExt;
 
 	pIoStackLocation = IoGetCurrentIrpStackLocation(pIrp);
 	NT_ASSERT(pIoStackLocation != NULL);
@@ -314,20 +318,20 @@ NTSTATUS gvmDeviceControl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 	
 	pDevExt = pDevObj->DeviceExtension;
 	switch (pDevExt->DevType) {
-	case GVM_DEVICE_TOP:
+	case AEHD_DEVICE_TOP:
 		rc = kvm_dev_ioctl(pDevObj, pIrp, ioctl);
 		break;
-	case GVM_DEVICE_VM:
+	case AEHD_DEVICE_VM:
 		rc = kvm_vm_ioctl(pDevObj, pIrp, ioctl);
 		break;
-	case GVM_DEVICE_VCPU:
+	case AEHD_DEVICE_VCPU:
 		rc = kvm_vcpu_ioctl(pDevObj, pIrp, ioctl);
 		break;
 	default:
-		DbgPrint("gvm Device Control with incorrect device type!\n");
+		DbgPrint("AEHD Device Control with incorrect device type!\n");
 	}
 
-	rc = gvmTranslateErrorcode(rc);
+	rc = aehdTranslateErrorcode(rc);
 
 	// Completing the device control
 	pIrp->IoStatus.Status = rc;
@@ -336,7 +340,7 @@ NTSTATUS gvmDeviceControl(PDEVICE_OBJECT pDevObj, PIRP pIrp)
 	return rc;
 }
 
-static void gvmPowerCallback(void *notused, void *arg1, void *arg2)
+static void aehdPowerCallback(void *notused, void *arg1, void *arg2)
 {
 	struct kvm *kvm;
 	struct kvm_vcpu *vcpu;
@@ -376,7 +380,7 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 	UNICODE_STRING PowerCallbackName;;
 	OBJECT_ATTRIBUTES PowerCallbackAttr;
 	PDEVICE_OBJECT pDevObj = NULL;
-	struct gvm_device_extension *pDevExt;
+	struct aehd_device_extension *pDevExt;
 	NTSTATUS rc;
 	int r;
 
@@ -386,7 +390,7 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 
 	// Allocate and Initialize a zero page
 	pZeroPage = ExAllocatePoolWithTag(NonPagedPool,
-					  PAGE_SIZE, GVM_POOL_TAG);
+					  PAGE_SIZE, AEHD_POOL_TAG);
 	if (!pZeroPage)
 		return STATUS_NO_MEMORY;
 	RtlZeroBytes(pZeroPage, PAGE_SIZE);
@@ -404,12 +408,12 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 
 	gpDrvObj = pDrvObj;
 
-	RtlInitUnicodeString(&DeviceName, GVM_DEVICE_NAME);
+	RtlInitUnicodeString(&DeviceName, AEHD_DEVICE_NAME);
 
 	rc = IoCreateDevice(pDrvObj,
-			    sizeof(struct gvm_device_extension),
+			    sizeof(struct aehd_device_extension),
 			    &DeviceName,
-			    FILE_DEVICE_GVM,
+			    FILE_DEVICE_AEHD,
 			    FILE_DEVICE_SECURE_OPEN,
 			    FALSE,
 			    &pDevObj);
@@ -418,17 +422,17 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 		goto out_free1;
 
 	pDevExt = pDevObj->DeviceExtension;
-	pDevExt->DevType = GVM_DEVICE_TOP;
+	pDevExt->DevType = AEHD_DEVICE_TOP;
 
-	pDrvObj->DriverUnload = gvmDriverUnload;
-	pDrvObj->MajorFunction[IRP_MJ_CREATE] = gvmDeviceCreate;
-	pDrvObj->MajorFunction[IRP_MJ_CLOSE] = gvmDeviceClose;
-	pDrvObj->MajorFunction[IRP_MJ_DEVICE_CONTROL] = gvmDeviceControl;
+	pDrvObj->DriverUnload = aehdDriverUnload;
+	pDrvObj->MajorFunction[IRP_MJ_CREATE] = aehdDeviceCreate;
+	pDrvObj->MajorFunction[IRP_MJ_CLOSE] = aehdDeviceClose;
+	pDrvObj->MajorFunction[IRP_MJ_DEVICE_CONTROL] = aehdDeviceControl;
 
 	/* Windows Fast Io Device Control */
 	RtlZeroMemory(&fastIoDispatch, sizeof(FAST_IO_DISPATCH));
 	fastIoDispatch.SizeOfFastIoDispatch = sizeof(FAST_IO_DISPATCH);
-	fastIoDispatch.FastIoDeviceControl = gvmFastIoDeviceControl;
+	fastIoDispatch.FastIoDeviceControl = aehdFastIoDeviceControl;
 	pDrvObj->FastIoDispatch = &fastIoDispatch;
 
 	/* Register callback for system sleep transitions.
@@ -442,10 +446,16 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 			      true, true);
 	if (NT_SUCCESS(rc))
 		power_callback_handle = ExRegisterCallback(power_callback,
-					   gvmPowerCallback,
+					   aehdPowerCallback,
 					   NULL);
 
-	RtlInitUnicodeString(&DosDeviceName, GVM_DOS_DEVICE_NAME);
+	RtlInitUnicodeString(&DosDeviceName, AEHD_DOS_DEVICE_NAME);
+
+	rc = IoCreateSymbolicLink(&DosDeviceName, &DeviceName);
+	if (!NT_SUCCESS(rc))
+		goto out_free2;
+
+	RtlInitUnicodeString(&DosDeviceName, AEHD_DOS_DEVICE_NAME_OLD);
 
 	rc = IoCreateSymbolicLink(&DosDeviceName, &DeviceName);
 	if (!NT_SUCCESS(rc))

@@ -16,38 +16,38 @@ Class = System
 ClassGuid = {4d36e97d-e325-11ce-bfc1-08002be10318}
 DriverVer = 11/13/2019,1.2.0.0
 DriverPackageType = KernelService
-CatalogFile = gvm.cat
+CatalogFile = aehd.cat
 
 [DestinationDirs]
 DefaultDestDir = 12
 
 [DefaultInstall]
-CopyFiles = gvm.DriverFiles
+CopyFiles = aehd.DriverFiles
 
 [DefaultInstall.Services]
-AddService = gvm,0x00000002,gvm.Service
+AddService = aehd,0x00000002,aehd.Service
 
 [DefaultUninstall]
-DelFiles = gvm.DriverFiles
+DelFiles = aehd.DriverFiles
 
 [DefaultUninstall.Services]
-DelService = gvm,0x200
+DelService = aehd,0x200
 
 [SourceDisksFiles]
-gvm.sys = 1
+aehd.sys = 1
 
 [SourceDisksNames]
 1 = %DISK_NAME%,
 
-[gvm.DriverFiles]
-gvm.sys
+[aehd.DriverFiles]
+aehd.sys
 
-[gvm.Service]
-DisplayName    = Android Emulator Hypervisor Driver Service
+[aehd.Service]
+DisplayName    = Android Emulator hypervisor driver Service
 ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
 StartType      = 1                  ; SERVICE_SYSTEM_START
 ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
-ServiceBinary  = %12%\gvm.sys
+ServiceBinary  = %12%\aehd.sys
 
 [Strings]
-DISK_NAME = "Android Emulator Hypervisor Driver Installation Media"
+DISK_NAME = "Android Emulator hypervisor driver Installation Media"

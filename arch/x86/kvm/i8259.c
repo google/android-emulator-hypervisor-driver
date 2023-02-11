@@ -31,7 +31,7 @@
 #include <linux/kvm_host.h>
 
 #include <ntddk.h>
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 #define pr_pic_unimpl(fmt, ...)	\
 	pr_err_ratelimited("kvm: pic: " fmt, ## __VA_ARGS__)
@@ -64,7 +64,7 @@ static void pic_unlock(struct kvm_pic *s)
 		if (!found)
 			return;
 
-		kvm_make_request(GVM_REQ_EVENT, found);
+		kvm_make_request(AEHD_REQ_EVENT, found);
 		kvm_vcpu_kick(found);
 	}
 }
@@ -615,16 +615,16 @@ struct kvm_pic *kvm_create_pic(struct kvm *kvm)
 	kvm_iodevice_init(&s->dev_slave, &picdev_slave_ops);
 	kvm_iodevice_init(&s->dev_eclr, &picdev_eclr_ops);
 	mutex_lock(&kvm->slots_lock);
-	ret = kvm_io_bus_register_dev(kvm, GVM_PIO_BUS, 0x20, 2,
+	ret = kvm_io_bus_register_dev(kvm, AEHD_PIO_BUS, 0x20, 2,
 				      &s->dev_master);
 	if (ret < 0)
 		goto fail_unlock;
 
-	ret = kvm_io_bus_register_dev(kvm, GVM_PIO_BUS, 0xa0, 2, &s->dev_slave);
+	ret = kvm_io_bus_register_dev(kvm, AEHD_PIO_BUS, 0xa0, 2, &s->dev_slave);
 	if (ret < 0)
 		goto fail_unreg_2;
 
-	ret = kvm_io_bus_register_dev(kvm, GVM_PIO_BUS, 0x4d0, 2, &s->dev_eclr);
+	ret = kvm_io_bus_register_dev(kvm, AEHD_PIO_BUS, 0x4d0, 2, &s->dev_eclr);
 	if (ret < 0)
 		goto fail_unreg_1;
 
@@ -633,10 +633,10 @@ struct kvm_pic *kvm_create_pic(struct kvm *kvm)
 	return s;
 
 fail_unreg_1:
-	kvm_io_bus_unregister_dev(kvm, GVM_PIO_BUS, &s->dev_slave);
+	kvm_io_bus_unregister_dev(kvm, AEHD_PIO_BUS, &s->dev_slave);
 
 fail_unreg_2:
-	kvm_io_bus_unregister_dev(kvm, GVM_PIO_BUS, &s->dev_master);
+	kvm_io_bus_unregister_dev(kvm, AEHD_PIO_BUS, &s->dev_master);
 
 fail_unlock:
 	mutex_unlock(&kvm->slots_lock);
@@ -648,8 +648,8 @@ fail_unlock:
 
 void kvm_destroy_pic(struct kvm_pic *vpic)
 {
-	kvm_io_bus_unregister_dev(vpic->kvm, GVM_PIO_BUS, &vpic->dev_master);
-	kvm_io_bus_unregister_dev(vpic->kvm, GVM_PIO_BUS, &vpic->dev_slave);
-	kvm_io_bus_unregister_dev(vpic->kvm, GVM_PIO_BUS, &vpic->dev_eclr);
+	kvm_io_bus_unregister_dev(vpic->kvm, AEHD_PIO_BUS, &vpic->dev_master);
+	kvm_io_bus_unregister_dev(vpic->kvm, AEHD_PIO_BUS, &vpic->dev_slave);
+	kvm_io_bus_unregister_dev(vpic->kvm, AEHD_PIO_BUS, &vpic->dev_eclr);
 	kfree(vpic);
 }

@@ -9,7 +9,7 @@
 ; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 ; GNU General Public License for more details.
 
-; low-level assembly code for gvm as there is no inline assembly support
+; low-level assembly code for aehd as there is no inline assembly support
 ; from microsoft c++ compiler.
 include <__asm.inc>
 
@@ -119,25 +119,25 @@ load_TR_desc proc
 	ret
 load_TR_desc endp
 
-gvm_read_ldt proc
+aehd_read_ldt proc
 	sldt ax
 	ret
-gvm_read_ldt endp
+aehd_read_ldt endp
 
-gvm_load_ldt proc
+aehd_load_ldt proc
 	lldt cx
 	ret
-gvm_load_ldt endp
+aehd_load_ldt endp
 
-gvm_read_tr proc
+aehd_read_tr proc
 	str ax
 	ret
-gvm_read_tr endp
+aehd_read_tr endp
 
-gvm_load_tr proc
+aehd_load_tr proc
 	ltr cx
 	ret
-gvm_load_tr endp
+aehd_load_tr endp
 
 load_ss_segment proc frame
 	push rbp

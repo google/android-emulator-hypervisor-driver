@@ -26,7 +26,7 @@
 #define VMX_H
 
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 #include <uapi/asm/vmx.h>
 
 /*
@@ -390,9 +390,9 @@ enum vmcs_field {
 
 #define VMX_AR_RESERVD_MASK 0xfffe0f00
 
-#define TSS_PRIVATE_MEMSLOT			(GVM_USER_MEM_SLOTS + 0)
-#define APIC_ACCESS_PAGE_PRIVATE_MEMSLOT	(GVM_USER_MEM_SLOTS + 1)
-#define IDENTITY_PAGETABLE_PRIVATE_MEMSLOT	(GVM_USER_MEM_SLOTS + 2)
+#define TSS_PRIVATE_MEMSLOT			(AEHD_USER_MEM_SLOTS + 0)
+#define APIC_ACCESS_PAGE_PRIVATE_MEMSLOT	(AEHD_USER_MEM_SLOTS + 1)
+#define IDENTITY_PAGETABLE_PRIVATE_MEMSLOT	(AEHD_USER_MEM_SLOTS + 2)
 
 #define VMX_NR_VPIDS				(1 << 16)
 #define VMX_VPID_EXTENT_SINGLE_CONTEXT		1

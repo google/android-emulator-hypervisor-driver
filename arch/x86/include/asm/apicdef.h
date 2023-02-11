@@ -5,7 +5,7 @@
 #ifndef _ASM_X86_APICDEF_H
 #define _ASM_X86_APICDEF_H
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 /*
  * Constants for various Intel APICs. (local APIC, IOAPIC, etc.)

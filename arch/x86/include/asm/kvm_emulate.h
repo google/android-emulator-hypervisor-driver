@@ -15,7 +15,7 @@
 #ifndef _ASM_X86_KVM_X86_EMULATE_H
 #define _ASM_X86_KVM_X86_EMULATE_H
 
-#include <gvm_types.h>
+#include <aehd_types.h>
 
 struct x86_emulate_ctxt;
 enum x86_intercept;
