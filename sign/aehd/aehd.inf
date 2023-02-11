@@ -14,23 +14,24 @@ Signature = "$Windows NT$"
 Provider = Google
 Class = System
 ClassGuid = {4d36e97d-e325-11ce-bfc1-08002be10318}
-DriverVer = 11/13/2019,1.2.0.0
+DriverVer = 02/10/2023,2.1.0.0
 DriverPackageType = KernelService
 CatalogFile = aehd.cat
 
 [DestinationDirs]
 DefaultDestDir = 12
 
-[DefaultInstall]
+[DefaultInstall.NTamd64]
 CopyFiles = aehd.DriverFiles
 
-[DefaultInstall.Services]
+[DefaultInstall.NTamd64.Services]
 AddService = aehd,0x00000002,aehd.Service
 
-[DefaultUninstall]
+[DefaultUninstall.NTamd64]
+LegacyUninstall=1
 DelFiles = aehd.DriverFiles
 
-[DefaultUninstall.Services]
+[DefaultUninstall.NTamd64.Services]
 DelService = aehd,0x200
 
 [SourceDisksFiles]
