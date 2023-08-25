@@ -538,7 +538,7 @@ static void kvm_free_memslot(struct kvm *kvm, struct kvm_memory_slot *free,
 			      struct kvm_memory_slot *dont)
 {
 	struct pmem_lock *pl;
-	int i;
+	size_t i;
 
 	if (!dont || free->dirty_bitmap != dont->dirty_bitmap)
 		kvm_destroy_dirty_bitmap(free);
@@ -1008,8 +1008,8 @@ int kvm_get_dirty_log(struct kvm *kvm,
 {
 	struct kvm_memslots *slots;
 	struct kvm_memory_slot *memslot;
-	int r, i, as_id, id;
-	size_t n;
+	int r, as_id, id;
+	size_t i, n;
 	size_t any = 0;
 
 	r = -EINVAL;
@@ -1068,8 +1068,8 @@ int kvm_get_dirty_log_protect(struct kvm *kvm,
 {
 	struct kvm_memslots *slots;
 	struct kvm_memory_slot *memslot;
-	int r, i, as_id, id;
-	size_t n;
+	int r, as_id, id;
+	size_t i, n;
 	size_t *dirty_bitmap;
 	size_t *dirty_bitmap_buffer;
 

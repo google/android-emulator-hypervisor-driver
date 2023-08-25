@@ -3032,7 +3032,7 @@ static int emulator_pio_in_emulated(struct x86_emulate_ctxt *ctxt,
 	ret = emulator_pio_in_out(vcpu, size, port, val, count, true);
 	if (ret) {
 data_avail:
-		memcpy(val, vcpu->arch.pio_data, size * count);
+		memcpy(val, vcpu->arch.pio_data, (size_t)size * count);
 		vcpu->arch.pio.count = 0;
 		return 1;
 	}
@@ -3046,7 +3046,7 @@ static int emulator_pio_out_emulated(struct x86_emulate_ctxt *ctxt,
 {
 	struct kvm_vcpu *vcpu = emul_to_vcpu(ctxt);
 
-	memcpy(vcpu->arch.pio_data, val, size * count);
+	memcpy(vcpu->arch.pio_data, val, (size_t)size * count);
 	return emulator_pio_in_out(vcpu, size, port, (void *)val, count, false);
 }
 

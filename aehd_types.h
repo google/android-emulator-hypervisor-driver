@@ -1124,14 +1124,22 @@ static __forceinline unsigned char test_bit(size_t nr, volatile size_t *addr)
 #ifdef _WIN64
 static __forceinline size_t __ffs(size_t mask)
 {
-	unsigned long pos;
+	unsigned long pos = ULONG_MAX;
+	/*
+	 * When mask is 0, __ffs return value is undefined. The caller is
+	 * expected to explicitly check against 0 first.
+	 */
 	_BitScanForward64(&pos, mask);
 	return pos;
 }
 
 static __forceinline size_t __fls(size_t mask)
 {
-	unsigned long pos;
+	unsigned long pos = ULONG_MAX;
+	/*
+	 * When mask is 0, __fls return value is undefined. The caller is
+	 * expected to explicitly check against 0 first.
+	 */
 	_BitScanReverse64(&pos, mask);
 	return pos;
 }

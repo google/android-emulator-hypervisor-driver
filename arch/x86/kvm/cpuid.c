@@ -674,12 +674,12 @@ int kvm_dev_ioctl_get_cpuid(PIRP pIrp, struct kvm_cpuid *cpuid,
 
 	cpuid->nent = nent;
 
-	r = aehdUpdateReturnBuffer(pIrp, 0, cpuid, sizeof(cpuid));
+	r = aehdUpdateReturnBuffer(pIrp, 0, cpuid, sizeof(*cpuid));
 	if (!NT_SUCCESS(r)) {
 		r = -EFAULT;
 		goto out_free;
 	}
-	r = aehdUpdateReturnBuffer(pIrp, sizeof(cpuid), cpuid_entries,
+	r = aehdUpdateReturnBuffer(pIrp, sizeof(*cpuid), cpuid_entries,
 		       nent * sizeof(struct kvm_cpuid_entry));
 	if (!NT_SUCCESS(r)) {
 		r = -EFAULT;

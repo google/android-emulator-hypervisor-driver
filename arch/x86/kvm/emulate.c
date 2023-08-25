@@ -1519,7 +1519,7 @@ static int pio_in_emulated(struct x86_emulate_ctxt *ctxt,
 		rc->pos = rc->end = 0;
 		if (!ctxt->ops->pio_in_emulated(ctxt, size, port, rc->data, n))
 			return 0;
-		rc->end = n * size;
+		rc->end = (size_t)n * size;
 	}
 
 	if (ctxt->rep_prefix && (ctxt->d & String) &&
