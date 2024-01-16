@@ -12,6 +12,7 @@
  */
 
 #include <ntddk.h>
+#include <wdmsec.h>
 #include <aehd_main.h>
 #include <ntkrutils.h>
 #include <linux/kvm_host.h>
@@ -26,6 +27,9 @@ struct cpuinfo_x86 boot_cpu_data;
 /* Keep the old name in order not to break existing android emulators */
 #define AEHD_DOS_DEVICE_NAME_OLD L"\\DosDevices\\gvm"
 #define POWER_CALL_BACK_NAME L"\\Callback\\PowerState"
+
+/* SDDL String for AEHD device object*/
+#define SDDL_DEVOBJ_AEHD L"D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGWGX;;;AU)"
 
 static PCALLBACK_OBJECT power_callback;
 static PVOID power_callback_handle;
@@ -163,6 +167,7 @@ NTSTATUS aehdCreateVMDevice(PHANDLE pHandle,
 			   UINT32 vmNumber, INT32 vcpuNumber, PVOID PrivData)
 {
 	UNICODE_STRING deviceName;
+	UNICODE_STRING sddlString;
 	WCHAR wDeviceName[64] = { 0 };
 	PDEVICE_OBJECT pDevObj = NULL;
 	OBJECT_ATTRIBUTES objAttr;
@@ -182,13 +187,17 @@ NTSTATUS aehdCreateVMDevice(PHANDLE pHandle,
 				       vmNumber,
 				       vcpuNumber);
 
-	rc = IoCreateDevice(gpDrvObj,
-		            sizeof(struct aehd_device_extension),
-			    &deviceName,
-			    FILE_DEVICE_AEHD,
-			    FILE_DEVICE_SECURE_OPEN,
-			    FALSE,
-			    &pDevObj);
+	RtlInitUnicodeString(&sddlString, SDDL_DEVOBJ_AEHD);
+
+	rc = IoCreateDeviceSecure(gpDrvObj,
+				  sizeof(struct aehd_device_extension),
+				  &deviceName,
+				  FILE_DEVICE_AEHD,
+				  FILE_DEVICE_SECURE_OPEN,
+				  FALSE,
+				  &sddlString,
+				  NULL,
+				  &pDevObj);
 	if (!NT_SUCCESS(rc))
 		return rc;
 
@@ -378,6 +387,7 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 	UNICODE_STRING DeviceName;
 	UNICODE_STRING DosDeviceName;
 	UNICODE_STRING PowerCallbackName;;
+	UNICODE_STRING SddlString;
 	OBJECT_ATTRIBUTES PowerCallbackAttr;
 	PDEVICE_OBJECT pDevObj = NULL;
 	struct aehd_device_extension *pDevExt;
@@ -409,14 +419,17 @@ NTSTATUS _stdcall DriverEntry(PDRIVER_OBJECT pDrvObj, PUNICODE_STRING pRegPath)
 	gpDrvObj = pDrvObj;
 
 	RtlInitUnicodeString(&DeviceName, AEHD_DEVICE_NAME);
+	RtlInitUnicodeString(&SddlString, SDDL_DEVOBJ_AEHD);
 
-	rc = IoCreateDevice(pDrvObj,
-			    sizeof(struct aehd_device_extension),
-			    &DeviceName,
-			    FILE_DEVICE_AEHD,
-			    FILE_DEVICE_SECURE_OPEN,
-			    FALSE,
-			    &pDevObj);
+	rc = IoCreateDeviceSecure(pDrvObj,
+				  sizeof(struct aehd_device_extension),
+				  &DeviceName,
+				  FILE_DEVICE_AEHD,
+				  FILE_DEVICE_SECURE_OPEN,
+				  FALSE,
+				  &SddlString,
+				  NULL,
+				  &pDevObj);
 
 	if (!NT_SUCCESS(rc))
 		goto out_free1;
