@@ -1018,6 +1018,12 @@ static __inline size_t __copy_user(void *dst, const void *src, size_t size,
 {
 	int clac = 0;
 
+	__try {
+		ProbeForRead(from? src : dst, size, 1);
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		return size;
+	}
+
 	if (boot_cpu_has(X86_FEATURE_SMAP)) {
 		local_irq_disable();
 		if (__readcr4() & X86_CR4_SMAP &&
