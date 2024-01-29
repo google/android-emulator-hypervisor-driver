@@ -949,18 +949,6 @@ static __inline void kvm_release_page(PMDL mdl)
 	IoFreeMdl(mdl);
 }
 
-/* We actually did not copy from *user* here. This function in kvm is used to
- * ioctl parameters. On Windows, we always use buffered io for device control.
- * Thus the address supplied to copy_from_user is address in kernel space.
- * Simple keep the function name here.
- * __copy_from/to_user is really copying from user space.
- */
-static __inline size_t copy_from_user(void *dst, const void *src, size_t size)
-{
-	memcpy(dst, src, size);
-	return 0;
-}
-
 static __inline size_t __copy_user_safe(void *dst, const void *src, size_t size,
 	       int from)
 {
@@ -1062,17 +1050,6 @@ static __inline void *kmap_atomic(PMDL mdl)
 static __inline void kunmap_atomic(PMDL mdl)
 {
 	kunmap(mdl);
-}
-
-static __inline void *memdup_user(const void *user, size_t size)
-{
-	void *buf = kzalloc(size, GFP_KERNEL);
-
-	if (!buf)
-		return ERR_PTR(-ENOMEM);
-	if (copy_from_user(buf, user, size))
-		return ERR_PTR(-EFAULT);
-	return buf;
 }
 
 /*

@@ -164,7 +164,7 @@ not_found:
 	return 36;
 }
 
-int kvm_vcpu_ioctl_set_cpuid(struct kvm_vcpu *vcpu,
+int kvm_vcpu_ioctl_set_cpuid(PIRP pIrp, struct kvm_vcpu *vcpu,
 			      struct kvm_cpuid *cpuid,
 			      struct kvm_cpuid_entry __user *entries)
 {
@@ -174,7 +174,7 @@ int kvm_vcpu_ioctl_set_cpuid(struct kvm_vcpu *vcpu,
 	if (cpuid->nent > AEHD_MAX_CPUID_ENTRIES)
 		goto out;
 	r = -EFAULT;
-	if (copy_from_user(&vcpu->arch.cpuid_entries, entries,
+	if (aehdCopyInputBuffer(pIrp, sizeof(cpuid), &vcpu->arch.cpuid_entries,
 			   cpuid->nent * sizeof(struct kvm_cpuid_entry)))
 		goto out;
 	vcpu->arch.cpuid_nent = cpuid->nent;
@@ -594,7 +594,7 @@ static bool is_centaur_cpu(const struct kvm_cpuid_param *param)
 	return 0;
 }
 
-static bool sanity_check_entries(struct kvm_cpuid_entry __user *entries,
+static bool sanity_check_entries(PIRP pIrp, struct kvm_cpuid_entry __user *entries,
 				 __u32 num_entries, unsigned int ioctl_type)
 {
 	int i;
@@ -612,7 +612,9 @@ static bool sanity_check_entries(struct kvm_cpuid_entry __user *entries,
 	 * sheds a tear.
 	 */
 	for (i = 0; i < num_entries; i++) {
-		if (copy_from_user(pad, entries[i].padding, sizeof(pad)))
+		u32 start = sizeof(struct kvm_cpuid) + i * sizeof(struct kvm_cpuid_entry)
+					+ offsetof(struct kvm_cpuid_entry, padding);
+		if (aehdCopyInputBuffer(pIrp, start, pad, sizeof(pad)))
 			return true;
 
 		if (pad[0] || pad[1] || pad[2])
@@ -639,7 +641,7 @@ int kvm_dev_ioctl_get_cpuid(PIRP pIrp, struct kvm_cpuid *cpuid,
 	if (cpuid->nent > AEHD_MAX_CPUID_ENTRIES)
 		cpuid->nent = AEHD_MAX_CPUID_ENTRIES;
 
-	if (sanity_check_entries(entries, cpuid->nent, type))
+	if (sanity_check_entries(pIrp, entries, cpuid->nent, type))
 		return -EINVAL;
 
 	r = -ENOMEM;

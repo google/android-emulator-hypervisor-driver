@@ -29,6 +29,9 @@ struct aehd_device_extension {
 extern PVOID pZeroPage;
 
 extern int aehdUpdateReturnBuffer(PIRP pIrp, u32 start, void *src, u32 size);
+extern int aehdCopyInputBuffer(PIRP pIrp, u32 start, void* dst, u32 size);
+extern void* aehdMemdupUser(PIRP pIrp, u32 start, u32 size);
+
 extern void aehdWaitSuspend(
 	_In_ PKAPC Apc,
 	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,

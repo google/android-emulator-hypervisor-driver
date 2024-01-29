@@ -17,12 +17,9 @@ struct kvm_cpuid_entry *kvm_find_cpuid_entry(struct kvm_vcpu *vcpu,
 int kvm_dev_ioctl_get_cpuid(PIRP pIrp, struct kvm_cpuid *cpuid,
 			    struct kvm_cpuid_entry __user *entries,
 			    unsigned int type);
-int kvm_vcpu_ioctl_set_cpuid(struct kvm_vcpu *vcpu,
+int kvm_vcpu_ioctl_set_cpuid(PIRP Irp, struct kvm_vcpu *vcpu,
 			     struct kvm_cpuid *cpuid,
 			     struct kvm_cpuid_entry __user *entries);
-int kvm_vcpu_ioctl_set_cpuid(struct kvm_vcpu *vcpu,
-			      struct kvm_cpuid *cpuid,
-			      struct kvm_cpuid_entry __user *entries);
 int kvm_vcpu_ioctl_get_cpuid(struct kvm_vcpu *vcpu,
 			      struct kvm_cpuid *cpuid,
 			      struct kvm_cpuid_entry __user *entries);

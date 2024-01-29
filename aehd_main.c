@@ -64,6 +64,33 @@ int aehdUpdateReturnBuffer(PIRP pIrp, u32 start, void *src, u32 size)
 	return 0;
 }
 
+int aehdCopyInputBuffer(PIRP pIrp, u32 start, void* dst, u32 size)
+{
+	PIO_STACK_LOCATION pIoStack = IoGetCurrentIrpStackLocation(pIrp);
+	unsigned char* pBuff = pIrp->AssociatedIrp.SystemBuffer;
+	u32 buffSize = pIoStack->Parameters.DeviceIoControl.InputBufferLength;
+
+	if (((u64)start + (u64)size) > buffSize)
+		return -E2BIG;
+
+	RtlCopyBytes(dst, pBuff + start, size);
+	return 0;
+}
+
+void* aehdMemdupUser(PIRP pIrp, u32 start, u32 size)
+{
+	void* buf = kzalloc(size, GFP_KERNEL);
+	if (!buf)
+		return ERR_PTR(-ENOMEM);
+
+	if (aehdCopyInputBuffer(pIrp, start, buf, size)) {
+		kfree(buf);
+		return ERR_PTR(-EFAULT);
+
+	}
+	return buf;
+}
+
 VOID NTAPI aehdWaitSuspend(
 	_In_ PKAPC Apc,
 	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,

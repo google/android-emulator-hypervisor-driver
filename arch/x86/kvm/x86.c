@@ -1236,7 +1236,7 @@ static int msr_io(PIRP pIrp, struct kvm_vcpu *vcpu,
 	unsigned size;
 
 	r = -EFAULT;
-	if (copy_from_user(&msrs, user_msrs, sizeof msrs))
+	if (aehdCopyInputBuffer(pIrp, 0, &msrs, sizeof msrs))
 		goto out;
 
 	r = -E2BIG;
@@ -1244,7 +1244,7 @@ static int msr_io(PIRP pIrp, struct kvm_vcpu *vcpu,
 		goto out;
 
 	size = sizeof(struct kvm_msr_entry) * msrs.nmsrs;
-	entries = memdup_user(user_msrs->entries, size);
+	entries = aehdMemdupUser(pIrp, sizeof(msrs), size);
 	if (IS_ERR(entries)) {
 		r = PTR_ERR(entries);
 		goto out;
@@ -1377,7 +1377,7 @@ long kvm_arch_dev_ioctl(struct aehd_device_extension *devext,
 		struct kvm_cpuid cpuid;
 
 		r = -EFAULT;
-		if (copy_from_user(&cpuid, cpuid_arg, sizeof cpuid))
+		if (aehdCopyInputBuffer(pIrp, 0, &cpuid, sizeof cpuid))
 			goto out;
 
 		r = kvm_dev_ioctl_get_cpuid(pIrp, &cpuid, cpuid_arg->entries,
@@ -1876,7 +1876,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		r = -EINVAL;
 		if (!lapic_in_kernel(vcpu))
 			goto out;
-		u.lapic = memdup_user(argp, sizeof(*u.lapic));
+		u.lapic = aehdMemdupUser(pIrp, 0, sizeof(*u.lapic));
 		if (IS_ERR(u.lapic))
 			return PTR_ERR(u.lapic);
 
@@ -1887,7 +1887,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		struct kvm_interrupt irq;
 
 		r = -EFAULT;
-		if (copy_from_user(&irq, argp, sizeof irq))
+		if (aehdCopyInputBuffer(pIrp, 0, &irq, sizeof irq))
 			goto out;
 		r = kvm_vcpu_ioctl_interrupt(vcpu, &irq);
 		break;
@@ -1905,9 +1905,10 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		struct kvm_cpuid cpuid;
 
 		r = -EFAULT;
-		if (copy_from_user(&cpuid, cpuid_arg, sizeof cpuid))
+		if (aehdCopyInputBuffer(pIrp, 0, &cpuid, sizeof cpuid))
 			goto out;
-		r = kvm_vcpu_ioctl_set_cpuid(vcpu, &cpuid,
+
+		r = kvm_vcpu_ioctl_set_cpuid(pIrp, vcpu, &cpuid,
 					      cpuid_arg->entries);
 		break;
 	}
@@ -1916,7 +1917,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		struct kvm_cpuid cpuid;
 
 		r = -EFAULT;
-		if (copy_from_user(&cpuid, cpuid_arg, sizeof cpuid))
+		if (aehdCopyInputBuffer(pIrp, 0, &cpuid, sizeof cpuid))
 			goto out;
 		r = kvm_vcpu_ioctl_get_cpuid(vcpu, &cpuid,
 					      cpuid_arg->entries);
@@ -1939,7 +1940,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		struct kvm_tpr_access_ctl tac;
 
 		r = -EFAULT;
-		if (copy_from_user(&tac, argp, sizeof tac))
+		if (aehdCopyInputBuffer(pIrp, 0, &tac, sizeof tac))
 			goto out;
 		r = vcpu_ioctl_tpr_access_reporting(vcpu, &tac);
 		if (r)
@@ -1955,7 +1956,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		if (!lapic_in_kernel(vcpu))
 			goto out;
 		r = -EFAULT;
-		if (copy_from_user(&va, argp, sizeof va))
+		if (aehdCopyInputBuffer(pIrp, 0, &va, sizeof va))
 			goto out;
 		idx = srcu_read_lock(&vcpu->kvm->srcu);
 		r = kvm_lapic_set_vapic_addr(vcpu, va.vapic_addr);
@@ -1975,7 +1976,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		struct kvm_vcpu_events events;
 
 		r = -EFAULT;
-		if (copy_from_user(&events, argp, sizeof(struct kvm_vcpu_events)))
+		if (aehdCopyInputBuffer(pIrp, 0, &events, sizeof(struct kvm_vcpu_events)))
 			break;
 
 		r = kvm_vcpu_ioctl_x86_set_vcpu_events(vcpu, &events);
@@ -1994,7 +1995,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		struct kvm_debugregs dbgregs;
 
 		r = -EFAULT;
-		if (copy_from_user(&dbgregs, argp,
+		if (aehdCopyInputBuffer(pIrp, 0, &dbgregs,
 				   sizeof(struct kvm_debugregs)))
 			break;
 
@@ -2014,7 +2015,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		break;
 	}
 	case AEHD_SET_XSAVE: {
-		u.xsave = memdup_user(argp, sizeof(*u.xsave));
+		u.xsave = aehdMemdupUser(pIrp, 0, sizeof(*u.xsave));
 		if (IS_ERR(u.xsave))
 			return PTR_ERR(u.xsave);
 
@@ -2034,7 +2035,7 @@ long kvm_arch_vcpu_ioctl(struct aehd_device_extension *devext,
 		break;
 	}
 	case AEHD_SET_XCRS: {
-		u.xcrs = memdup_user(argp, sizeof(*u.xcrs));
+		u.xcrs = aehdMemdupUser(pIrp, 0, sizeof(*u.xcrs));
 		if (IS_ERR(u.xcrs))
 			return PTR_ERR(u.xcrs);
 
@@ -2295,7 +2296,7 @@ long kvm_arch_vm_ioctl(struct aehd_device_extension *devext,
 		/* 0: PIC master, 1: PIC slave, 2: IOAPIC */
 		struct kvm_irqchip *chip;
 
-		chip = memdup_user(argp, sizeof(*chip));
+		chip = aehdMemdupUser(pIrp, 0, sizeof(*chip));
 		if (IS_ERR(chip)) {
 			r = PTR_ERR(chip);
 			goto out;
@@ -2316,7 +2317,7 @@ long kvm_arch_vm_ioctl(struct aehd_device_extension *devext,
 		/* 0: PIC master, 1: PIC slave, 2: IOAPIC */
 		struct kvm_irqchip *chip;
 
-		chip = memdup_user(argp, sizeof(*chip));
+		chip = aehdMemdupUser(pIrp, 0, sizeof(*chip));
 		if (IS_ERR(chip)) {
 			r = PTR_ERR(chip);
 			goto out;
@@ -2346,7 +2347,7 @@ long kvm_arch_vm_ioctl(struct aehd_device_extension *devext,
 		struct kvm_enable_cap cap;
 
 		r = -EFAULT;
-		if (copy_from_user(&cap, argp, sizeof(cap)))
+		if (aehdCopyInputBuffer(pIrp, 0, &cap, sizeof(cap)))
 			goto out;
 		r = kvm_vm_ioctl_enable_cap(kvm, &cap);
 		break;

@@ -1891,7 +1891,6 @@ NTSTATUS kvm_vcpu_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 {
 	struct aehd_device_extension *devext = pDevObj->DeviceExtension;
 	struct kvm_vcpu *vcpu = devext->PrivData;
-	void __user *argp = (void __user *)pIrp->AssociatedIrp.SystemBuffer;
 	int r;
 	struct kvm_fpu *fpu = NULL;
 	struct kvm_sregs *kvm_sregs = NULL;
@@ -1941,7 +1940,7 @@ out_free1:
 		struct kvm_regs *kvm_regs;
 
 		r = -ENOMEM;
-		kvm_regs = memdup_user(argp, sizeof(*kvm_regs));
+		kvm_regs = aehdMemdupUser(pIrp, 0, sizeof(*kvm_regs));
 		if (IS_ERR(kvm_regs)) {
 			r = PTR_ERR(kvm_regs);
 			goto out;
@@ -1965,7 +1964,7 @@ out_free1:
 		break;
 	}
 	case AEHD_SET_SREGS: {
-		kvm_sregs = memdup_user(argp, sizeof(*kvm_sregs));
+		kvm_sregs = aehdMemdupUser(pIrp, 0, sizeof(*kvm_sregs));
 		if (IS_ERR(kvm_sregs)) {
 			r = PTR_ERR(kvm_sregs);
 			kvm_sregs = NULL;
@@ -1987,7 +1986,7 @@ out_free1:
 		struct kvm_mp_state mp_state;
 
 		r = -EFAULT;
-		if (copy_from_user(&mp_state, argp, sizeof(mp_state)))
+		if (aehdCopyInputBuffer(pIrp, 0, &mp_state, sizeof(mp_state)))
 			goto out;
 		r = kvm_arch_vcpu_ioctl_set_mpstate(vcpu, &mp_state);
 		break;
@@ -1996,7 +1995,7 @@ out_free1:
 		struct kvm_translation tr;
 
 		r = -EFAULT;
-		if (copy_from_user(&tr, argp, sizeof(tr)))
+		if (aehdCopyInputBuffer(pIrp, 0, &tr, sizeof(tr)))
 			goto out;
 		r = kvm_arch_vcpu_ioctl_translate(vcpu, &tr);
 		if (r)
@@ -2008,7 +2007,7 @@ out_free1:
 		struct kvm_guest_debug dbg;
 
 		r = -EFAULT;
-		if (copy_from_user(&dbg, argp, sizeof(dbg)))
+		if (aehdCopyInputBuffer(pIrp, 0, &dbg, sizeof(dbg)))
 			goto out;
 		r = kvm_arch_vcpu_ioctl_set_guest_debug(vcpu, &dbg);
 		break;
@@ -2025,7 +2024,7 @@ out_free1:
 		break;
 	}
 	case AEHD_SET_FPU: {
-		fpu = memdup_user(argp, sizeof(*fpu));
+		fpu = aehdMemdupUser(pIrp, 0, sizeof(*fpu));
 		if (IS_ERR(fpu)) {
 			r = PTR_ERR(fpu);
 			fpu = NULL;
@@ -2089,7 +2088,7 @@ NTSTATUS kvm_vm_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 		struct kvm_dirty_log log;
 
 		r = -EFAULT;
-		if (copy_from_user(&log, argp, sizeof(log)))
+		if (aehdCopyInputBuffer(pIrp, 0, &log, sizeof(log)))
 			goto out;
 		r = kvm_vm_ioctl_get_dirty_log(kvm, &log);
 		break;
@@ -2112,7 +2111,7 @@ NTSTATUS kvm_vm_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 		struct kvm_irq_level irq_event;
 
 		r = -EFAULT;
-		if (copy_from_user(&irq_event, argp, sizeof(irq_event)))
+		if (aehdCopyInputBuffer(pIrp, 0, &irq_event, sizeof(irq_event)))
 			goto out;
 
 		r = kvm_vm_ioctl_irq_line(kvm, &irq_event, true);
@@ -2135,7 +2134,7 @@ NTSTATUS kvm_vm_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 		struct kvm_irq_routing_entry *entries = NULL;
 
 		r = -EFAULT;
-		if (copy_from_user(&routing, argp, sizeof(routing)))
+		if (aehdCopyInputBuffer(pIrp, 0, &routing, sizeof(routing)))
 			goto out;
 		r = -EINVAL;
 		if (routing.nr > AEHD_MAX_IRQ_ROUTES)
@@ -2149,7 +2148,7 @@ NTSTATUS kvm_vm_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 				goto out;
 			r = -EFAULT;
 			urouting = argp;
-			if (copy_from_user(entries, urouting->entries,
+			if (aehdCopyInputBuffer(pIrp, offsetof(struct kvm_irq_routing, entries), entries,
 					   routing.nr * sizeof(*entries)))
 				goto out_free_irq_routing;
 		}
