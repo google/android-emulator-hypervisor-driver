@@ -129,52 +129,72 @@ mapout:
 /*
  Timer Stuffs
  */
-void timer_dpc_fn(struct _KDPC *Dpc, 
-			PVOID DeferredContext, 
-			PVOID SystemArgument1, 
-			PVOID SystemArgument2)
+void timer_callback_fn(PEX_TIMER ex_timer, PVOID ex_timer_context)
 {
-	struct hrtimer *timer = (struct hrtimer*)DeferredContext;
+	struct hrtimer *timer = (struct hrtimer*)ex_timer_context;
 	enum hrtimer_restart ret = timer->function(timer);
 	if(ret == HRTIMER_RESTART)
 		hrtimer_restart(timer);
 }
 
-void hrtimer_init(struct hrtimer *timer, clockid_t clock_id, enum hrtimer_mode mode)
+int hrtimer_init(struct hrtimer *timer, clockid_t clock_id, enum hrtimer_mode mode)
 {
-	KeInitializeTimerEx(&timer->ktimer, SynchronizationTimer);
+	timer->ex_timer = ExAllocateTimer(timer_callback_fn, timer, EX_TIMER_HIGH_RESOLUTION);
+	if (!timer->ex_timer)
+		return 1;
+	ExInitializeSetTimerParameters(&timer->ext_set_parameters);
 	timer->base = &timer->base_hack;
 	timer->base->get_time = ktime_get;
-	KeInitializeThreadedDpc(&timer->kdpc, (PKDEFERRED_ROUTINE)timer_dpc_fn, timer);
+	return 0;
 }
 
 int hrtimer_start(struct hrtimer *timer, ktime_t tim, const enum hrtimer_mode mode)
 {
 	int r;
+	LARGE_INTEGER time;
+	LONGLONG duetime;
 	// We only emulate hrtimer mode that KVM uses
 	ASSERTMSG("Unsupported hrtimer mode", mode == HRTIMER_MODE_ABS_PINNED);
 	timer->due_time.QuadPart = ktime_to_ns(tim);
 	timer->node.expires = tim;
 	do_div(&(u64)timer->due_time.QuadPart, 100);
-	r = (int)KeSetTimer(&timer->ktimer, timer->due_time, &timer->kdpc);
+	KeQuerySystemTime(&time);
+	duetime = timer->due_time.QuadPart - time.QuadPart;
+	if (duetime < 0)
+		duetime = 0;
+	r = (int)ExSetTimer(timer->ex_timer, -duetime, 0, &timer->ext_set_parameters);
 	return r;
 }
 
 int hrtimer_cancel(struct hrtimer *timer)
 {
 	int r;
-	r = KeCancelTimer(&timer->ktimer);
+	r = ExCancelTimer(timer->ex_timer, NULL);
 	return r;
 }
 
 int hrtimer_restart(struct hrtimer* timer)
 {
 	int r;
-	//timer->due_time.QuadPart = (ktime_to_ns(ktime_get()) - ktime_to_ns(timer->node.expires)) / 100;
+	LARGE_INTEGER time;
+	LONGLONG duetime;
+
 	timer->due_time.QuadPart = ktime_to_ns(timer->node.expires);
 	do_div(&(u64)timer->due_time.QuadPart, 100);
-	r = (int)KeSetTimer(&timer->ktimer, timer->due_time, &timer->kdpc);
+	KeQuerySystemTime(&time);
+	duetime = timer->due_time.QuadPart - time.QuadPart;
+	if (duetime < 0)
+		duetime = 0;
+	r = (int)ExSetTimer(timer->ex_timer, -duetime, 0, &timer->ext_set_parameters);
 	return r;
+}
+
+void hrtimer_delete(struct hrtimer* timer)
+{
+	EXT_DELETE_PARAMETERS ext_delete_parameters;
+
+	ExInitializeDeleteTimerParameters(&ext_delete_parameters);
+	ExDeleteTimer(timer->ex_timer, TRUE, TRUE, &ext_delete_parameters);
 }
 
 struct list_head aehd_mmap_list;

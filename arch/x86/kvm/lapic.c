@@ -1450,6 +1450,7 @@ void kvm_free_lapic(struct kvm_vcpu *vcpu)
 		return;
 
 	hrtimer_cancel(&apic->lapic_timer.timer);
+	hrtimer_delete(&apic->lapic_timer.timer);
 
 	if (apic->regs)
 		free_page((size_t)apic->regs);
@@ -1670,8 +1671,9 @@ int kvm_create_lapic(struct kvm_vcpu *vcpu)
 	}
 	apic->vcpu = vcpu;
 
-	hrtimer_init(&apic->lapic_timer.timer, CLOCK_MONOTONIC,
-		     HRTIMER_MODE_ABS_PINNED);
+	if (hrtimer_init(&apic->lapic_timer.timer, CLOCK_MONOTONIC,
+		     HRTIMER_MODE_ABS_PINNED))
+		goto nomem_free_apic;
 	apic->lapic_timer.timer.function = apic_timer_fn;
 
 	/*

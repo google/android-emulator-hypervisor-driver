@@ -596,16 +596,17 @@ struct hrtimer
 	enum hrtimer_restart		(*function)(struct hrtimer *);
 	struct hrtimer_clock_base	*base;
 	size_t			state;
-	KTIMER                  ktimer;
-	KDPC                    kdpc;
+	PEX_TIMER               ex_timer;
+	EXT_SET_PARAMETERS      ext_set_parameters;
 	LARGE_INTEGER           due_time;
 	struct hrtimer_clock_base	base_hack;
 };
 
-void hrtimer_init(struct hrtimer *timer, clockid_t clock_id, enum hrtimer_mode mode);
+int hrtimer_init(struct hrtimer *timer, clockid_t clock_id, enum hrtimer_mode mode);
 int hrtimer_start(struct hrtimer *timer, ktime_t tim, const enum hrtimer_mode mode);
 int hrtimer_cancel(struct hrtimer *timer);
 int hrtimer_restart(struct hrtimer* timer);
+void hrtimer_delete(struct hrtimer* timer);
 
 static __forceinline void hrtimer_add_expires_ns(struct hrtimer *timer, u64 delta)
 {
