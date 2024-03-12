@@ -194,7 +194,7 @@ void hrtimer_delete(struct hrtimer* timer)
 	EXT_DELETE_PARAMETERS ext_delete_parameters;
 
 	ExInitializeDeleteTimerParameters(&ext_delete_parameters);
-	ExDeleteTimer(timer->ex_timer, TRUE, TRUE, &ext_delete_parameters);
+	ExDeleteTimer(timer->ex_timer, TRUE, FALSE, &ext_delete_parameters);
 }
 
 struct list_head aehd_mmap_list;
