@@ -24,7 +24,9 @@ In the latter case, users are required to install the driver manually.
 
 
 Prerequisite:
-1. CPU has virtualization extension and BIOS has NOT disabled the extension.
+1. CPU has virtualization extension and BIOS has NOT disabled the extension. Be
+   sure to check the BIOS because Windows can report it as enabled even when it
+   is disabled.
 2. Hyper-V must be disabled. Refer to [this
    page](https://github.com/google/android-emulator-hypervisor-driver-for-amd-processors/wiki/Is-Hyper-V-really-disabled%3F)
    for more information.
