@@ -15,6 +15,8 @@ Intel and AMD Processors. In fact, it supports Intel from version 1.0. The
 old name was chosen because Intel users were expected to continue using Intel
 HAXM.
 
+## Make Sure To Subscribe Andoid Studio Youtube Channel
+
 ## Download and Install
 Android Emulator hypervisor driver is released through [android-studio].
 However, only Android Studio with version 4.0 canary 5 or above can both
