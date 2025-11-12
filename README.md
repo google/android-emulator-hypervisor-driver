@@ -8,12 +8,11 @@ Android Emulator hypervisor driver runs as a Windows driver. User space
 support for Android Emulator hypervisor driver is available from Android
 Emulator.
 
-## Notice of the repository name change
-Android Emulator hypervisor driver for AMD Processors has been renamed to
-Android Emulator hypervisor driver to reflect the fact that it supports both
-Intel and AMD Processors. In fact, it supports Intel from version 1.0. The
-old name was chosen because Intel users were expected to continue using Intel
-HAXM.
+## Notice of Planned Deprecation
+Android Emulator hypervisor driver will be sunset on December 31, 2026.
+Android Emulator users on Windows will have until the end of 2026 to
+transition by enabling Windows Hypervisor Platform and performing the
+required system reboot.
 
 ## Download and Install
 Android Emulator hypervisor driver is released through [android-studio].
@@ -55,6 +54,13 @@ your OS information, CPU model in addition to details on the issue.
 ## Notes
 A patched QEMU can be found here at [github]. However, there is no support for
 it. Use at your own risk.
+
+## Historical Name of the Repository
+Android Emulator hypervisor driver used to be called Android Emulator
+hypervisor driver for AMD Processors. The renaming is to reflect the fact
+that it supports both Intel and AMD Processors. In fact, it supports Intel
+from version 1.0. The old name was chosen because Intel users were expected
+to continue using Intel HAXM.
 
 [android-studio]: https://developer.android.com/studio/index.html
 [github]: https://github.com/qemu-gvm/qemu-gvm
