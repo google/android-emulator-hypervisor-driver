@@ -2572,7 +2572,7 @@ static int rsm_load_state_64(struct x86_emulate_ctxt *ctxt, u64 smbase)
 
 	GET_SMSTATE(u64, smbase, 0x7f58, cr0);
 	GET_SMSTATE(u64, smbase, 0x7f50, temp64);
-	ctxt->ops->set_cr(ctxt, 3,  temp);
+	ctxt->ops->set_cr(ctxt, 3, temp64);
 	GET_SMSTATE(u64, smbase, 0x7f48, cr4);
 	GET_SMSTATE(u32, smbase, 0x7f00, temp);
 	ctxt->ops->set_smbase(ctxt, temp);
