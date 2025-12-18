@@ -289,7 +289,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry *entry, u32 function,
 		F(FMA) | F(CX16) | 0 /* xTPR Update, PDCM */ |
 		F(PCID) | 0 /* Reserved, DCA */ | F(XMM4_1) |
 		F(XMM4_2) | F(X2APIC) | F(MOVBE) | F(POPCNT) |
-		0 /* Reserved*/ | F(AES) | 0 /*F(XSAVE)*/ | 0 /* OSXSAVE */ | 0 /*F(AVX)*/ |
+		0 /* Reserved*/ | F(AES) | F(XSAVE) | 0 /* OSXSAVE */ | F(AVX) |
 		F(F16C) | F(RDRAND);
 	/* cpuid 0x80000001.ecx */
 	const u32 kvm_cpuid_8000_0001_ecx_x86_features =
