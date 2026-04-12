@@ -2080,7 +2080,8 @@ NTSTATUS kvm_vm_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 		struct kvm_userspace_memory_region kvm_userspace_mem;
 
 		r = -EFAULT;
-		RtlCopyBytes(&kvm_userspace_mem, pIrp->AssociatedIrp.SystemBuffer, sizeof(kvm_userspace_mem));
+		if (aehdCopyInputBuffer(pIrp, 0, &kvm_userspace_mem, sizeof(kvm_userspace_mem)))
+			goto out;
 		r = kvm_vm_ioctl_set_memory_region(kvm, &kvm_userspace_mem);
 		break;
 	}
