@@ -1905,9 +1905,13 @@ NTSTATUS kvm_vcpu_ioctl(PDEVICE_OBJECT pDevObj, PIRP pIrp,
 		r = kvm_vcpu_fast_ioctl_run(pDevObj);
 		break;
 	case AEHD_VCPU_MMAP:
+		if (vcpu->run_userva) {
+			r = -EEXIST;
+			break;
+		}
 		r = -EINVAL;
 		size_t mmap_size = 2 * PAGE_SIZE;
-		size_t userva = __vm_mmap(NULL, 0, mmap_size, PROT_READ |PROT_WRITE, 
+		size_t userva = __vm_mmap(NULL, 0, mmap_size, PROT_READ |PROT_WRITE,
 			MAP_SHARED | MAP_ANONYMOUS, 0, (size_t)vcpu->run);
 		if (!userva)
 			break;
